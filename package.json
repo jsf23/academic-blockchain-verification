@@ -1,0 +1,26 @@
+{
+  "name": "academic-blockchain-verification",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Prototype for academic certificate registration and verification on a local blockchain.",
+  "scripts": {
+    "start": "http-server frontend -p 4173 -c-1",
+    "deploy": "node scripts/deploy.js",
+    "seed:issuers": "node scripts/seed-authorized-issuers.js",
+    "test:contract": "mocha --timeout 30000 \"tests/contract/**/*.test.js\"",
+    "test:integration": "mocha --timeout 30000 \"tests/integration/**/*.test.js\"",
+    "test": "npm run test:contract && npm run test:integration"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "chai": "^5.1.2",
+    "ganache": "^7.9.2",
+    "http-server": "^14.1.1",
+    "mocha": "^10.8.2",
+    "solc": "^0.8.30"
+  }
+}

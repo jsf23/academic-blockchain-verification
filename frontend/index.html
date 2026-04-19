@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Registro de Integridad Académica</title>
+	<link rel="stylesheet" href="./css/app.css" />
+</head>
+
+<body data-page="home">
+	<main class="shell shell-home">
+		<section class="hero-card">
+			<p class="eyebrow">Autenticidad académica en blockchain local</p>
+			<h1>Registro y verificación de títulos con confianza digital.</h1>
+			<p class="lede">
+				Este prototipo permite que instituciones autorizadas registren huellas digitales de
+				certificados y ofrece a verificadores externos una forma directa de validar autenticidad.
+			</p>
+			<div class="hero-actions">
+				<a class="primary-link" href="./register.html">Registrar certificado</a>
+				<a class="secondary-link" href="./verify.html">Verificar certificado</a>
+			</div>
+		</section>
+
+		<section class="info-grid" aria-label="Características de la plataforma">
+			<article class="info-card">
+				<h2>Solo SHA-256</h2>
+				<p>Solo se gestionan huellas de documentos. Los archivos originales y los datos personales no se almacenan en la
+					cadena.</p>
+			</article>
+			<article class="info-card">
+				<h2>Emisión controlada</h2>
+				<p>Solo billeteras académicas autorizadas pueden enviar nuevos registros al sistema.</p>
+			</article>
+			<article class="info-card">
+				<h2>Verificación pública</h2>
+				<p>Cualquier verificador puede validar una huella y consultar la institución emisora y la fecha de registro.</p>
+			</article>
+		</section>
+
+		<section class="info-grid" aria-label="Cómo usar este prototipo">
+			<article class="info-card">
+				<h2>1. Registrar huella</h2>
+				<p>La institución carga el archivo del certificado. El navegador crea la huella digital de forma local.</p>
+			</article>
+			<article class="info-card">
+				<h2>2. Confirmar en blockchain</h2>
+				<p>La huella se registra en cadena con la dirección emisora y la fecha. No se sube el contenido del documento.
+				</p>
+			</article>
+			<article class="info-card">
+				<h2>3. Verificar en segundos</h2>
+				<p>Cualquier persona puede pegar una huella y obtener un resultado claro: auténtico, no encontrado o error de
+					verificación.</p>
+			</article>
+		</section>
+	</main>
+
+	<script type="module" src="./js/app.js"></script>
+</body>
+
+</html>
