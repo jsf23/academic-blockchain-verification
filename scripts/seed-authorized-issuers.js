@@ -25,12 +25,12 @@ async function loadArtifact() {
 }
 
 async function main() {
-	const rpcUrl = process.env.GANACHE_RPC_URL;
+	const rpcUrl = process.env.RPC_URL ?? process.env.GANACHE_RPC_URL;
 	const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
 	const authorizedIssuers = parseAuthorizedIssuers(process.env.AUTHORIZED_ISSUERS);
 
 	if (!rpcUrl || !deployerPrivateKey) {
-		throw new Error("GANACHE_RPC_URL and DEPLOYER_PRIVATE_KEY are required.");
+		throw new Error("RPC_URL (or GANACHE_RPC_URL) and DEPLOYER_PRIVATE_KEY are required.");
 	}
 
 	const artifact = await loadArtifact();

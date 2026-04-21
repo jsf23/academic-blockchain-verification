@@ -62,12 +62,12 @@ async function compileContract() {
 }
 
 async function deployContract(artifact) {
-	const rpcUrl = process.env.GANACHE_RPC_URL;
+	const rpcUrl = process.env.RPC_URL ?? process.env.GANACHE_RPC_URL;
 	const deployerPrivateKey = process.env.DEPLOYER_PRIVATE_KEY;
 	const authorizedIssuers = parseAuthorizedIssuers(process.env.AUTHORIZED_ISSUERS);
 
 	if (!rpcUrl) {
-		throw new Error("GANACHE_RPC_URL is required to deploy the contract.");
+		throw new Error("RPC_URL (or GANACHE_RPC_URL) is required to deploy the contract.");
 	}
 
 	if (!deployerPrivateKey) {
