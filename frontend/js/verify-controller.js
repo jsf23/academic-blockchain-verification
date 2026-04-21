@@ -35,7 +35,7 @@ export function classifyVerifyError(error) {
 		return {
 			status: "error",
 			errorCode: "CONTRACT_UNAVAILABLE",
-			message: "The registry contract is not reachable. Make sure Ganache is running and the contract is deployed."
+			message: "The registry contract is not reachable. Make sure your configured network and contract address are correct."
 		};
 	}
 
@@ -49,7 +49,7 @@ export function classifyVerifyError(error) {
 		return {
 			status: "error",
 			errorCode: "NETWORK_UNAVAILABLE",
-			message: "The local blockchain is not reachable. Make sure Ganache is running."
+			message: "The configured blockchain network is not reachable right now."
 		};
 	}
 

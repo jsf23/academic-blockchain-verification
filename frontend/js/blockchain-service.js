@@ -2,18 +2,48 @@ import Web3 from "https://cdn.jsdelivr.net/npm/web3@4.16.0/+esm";
 
 function getRuntimeConfig() {
 	return window.AcademicIntegrityApp?.config ?? {
-		rpcUrl: "http://127.0.0.1:7545",
+		rpcUrl: "",
 		contractAddress: "",
-		contractAbi: []
+		contractAbi: [],
+		preferWalletProvider: true
 	};
 }
 
+function getInjectedProvider() {
+	if (typeof window === "undefined") {
+		return null;
+	}
+
+	return window.ethereum ?? null;
+}
+
+function shouldUseInjectedProvider() {
+	const config = getRuntimeConfig();
+	return Boolean(getInjectedProvider()) && config.preferWalletProvider !== false;
+}
+
 let cachedWeb3;
+let cachedProviderMode;
 
 export function getWeb3Client() {
-	if (!cachedWeb3) {
+	const useInjectedProvider = shouldUseInjectedProvider();
+	const nextMode = useInjectedProvider ? "injected" : "rpc";
+
+	if (!cachedWeb3 || cachedProviderMode !== nextMode) {
+		if (useInjectedProvider) {
+			cachedWeb3 = new Web3(getInjectedProvider());
+			cachedProviderMode = "injected";
+			return cachedWeb3;
+		}
+
 		const { rpcUrl } = getRuntimeConfig();
+
+		if (!rpcUrl) {
+			throw new Error(window.AcademicIntegrityApp?.messages?.missingConfig ?? "Missing blockchain provider configuration.");
+		}
+
 		cachedWeb3 = new Web3(rpcUrl);
+		cachedProviderMode = "rpc";
 	}
 
 	return cachedWeb3;
@@ -35,11 +65,18 @@ export async function getConnectionStatus() {
 	const chainId = await web3.eth.getChainId();
 	return {
 		chainId: Number(chainId),
-		rpcUrl: getRuntimeConfig().rpcUrl
+		rpcUrl: getRuntimeConfig().rpcUrl,
+		providerMode: cachedProviderMode ?? "unknown"
 	};
 }
 
 export async function getAvailableAccounts() {
+	if (shouldUseInjectedProvider()) {
+		const provider = getInjectedProvider();
+		const accounts = await provider.request({ method: "eth_requestAccounts" });
+		return Array.isArray(accounts) ? accounts : [];
+	}
+
 	const web3 = getWeb3Client();
 	return web3.eth.getAccounts();
 }
@@ -97,7 +134,7 @@ export function classifyIssueError(error) {
 	if (message.includes("sender account not recognized") || message.includes("unknown account")) {
 		return {
 			errorCode: "WALLET_UNAVAILABLE",
-			message: "The issuer address is not available in the current Ganache workspace. Use an active Ganache account as issuer."
+			message: "The issuer address is not available in the active provider. Connect and use an account from your current wallet/network."
 		};
 	}
 
@@ -116,9 +153,11 @@ export async function submitCertificateIssuance({ hash, issuerAddress }) {
 		};
 	} catch (error) {
 		const mapped = classifyIssueError(error);
+		const rawMessage = error instanceof Error ? error.message : String(error);
 		return {
 			status: "failed",
-			...mapped
+			...mapped,
+			rawError: rawMessage
 		};
 	}
 }

@@ -1,8 +1,9 @@
 const DEFAULT_CONFIG = {
-	rpcUrl: "http://127.0.0.1:7545",
-	chainId: 1337,
+	rpcUrl: "",
+	chainId: null,
 	contractAddress: "",
-	contractAbi: []
+	contractAbi: [],
+	preferWalletProvider: true
 };
 
 const DEFAULT_MESSAGES = {

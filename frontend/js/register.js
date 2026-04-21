@@ -29,10 +29,30 @@ export function mapRegistrationError(error) {
 		};
 	}
 
+	if (
+		message.includes("missing contract configuration") ||
+		message.includes("missing blockchain provider configuration") ||
+		message.includes("missing config")
+	) {
+		return {
+			status: "failed",
+			errorCode: "CONTRACT_UNAVAILABLE",
+			message: "Configuration is incomplete. Verify contractAddress, ABI, and network settings in contract-config.json."
+		};
+	}
+
+	if (message.includes("chain") || message.includes("network") || message.includes("wrong network")) {
+		return {
+			status: "failed",
+			errorCode: "NETWORK_UNAVAILABLE",
+			message: "Wallet network does not match the configured contract network. Switch network and try again."
+		};
+	}
+
 	return {
 		status: "failed",
 		errorCode: "TRANSACTION_REJECTED",
-		message: "We could not complete the registration. Please check Ganache and try again."
+		message: "We could not complete the registration. Please check your wallet/network connection and try again."
 	};
 }
 
@@ -85,14 +105,17 @@ export function createRegistrationController(dependencies) {
 			};
 		}
 
-		const isAuthorized = await checkAuthorization(issuerAddress);
-
-		if (!isAuthorized) {
-			return {
-				status: "failed",
-				errorCode: "UNAUTHORIZED",
-				message: "The issuer wallet is not authorized in this registry."
-			};
+		try {
+			const isAuthorized = await checkAuthorization(issuerAddress);
+			if (!isAuthorized) {
+				return {
+					status: "failed",
+					errorCode: "UNAUTHORIZED",
+					message: "The issuer wallet is not authorized in this registry."
+				};
+			}
+		} catch {
+			// pre-check failed (provider issue); let the transaction decide
 		}
 
 		const submission = await issueCertificate({ hash, issuerAddress });
@@ -101,7 +124,8 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: submission.errorCode,
-				message: submission.message
+				message: submission.message,
+				rawError: submission.rawError
 			};
 		}
 
@@ -176,14 +200,14 @@ function wireRegistrationPage() {
 	const controller = createRegistrationController();
 
 	async function handleLoadAccounts() {
-		applyStatus(statusBox, "status-working", "Loading active Ganache accounts...");
+		applyStatus(statusBox, "status-working", "Loading available wallet accounts...");
 
 		try {
 			const accounts = await getAvailableAccounts();
 			accountsSelect.innerHTML = "";
 			const placeholder = document.createElement("option");
 			placeholder.value = "";
-			placeholder.textContent = "Select an active Ganache account...";
+			placeholder.textContent = "Select an available wallet account...";
 			accountsSelect.appendChild(placeholder);
 
 			for (const account of accounts) {
@@ -194,11 +218,11 @@ function wireRegistrationPage() {
 			}
 
 			if (accounts.length === 0) {
-				applyStatus(statusBox, "status-error", "No active accounts found in the current Ganache workspace.");
+				applyStatus(statusBox, "status-error", "No accounts are available in the active wallet/provider.");
 				return;
 			}
 
-			applyStatus(statusBox, "status-success", "Ganache accounts loaded. Select one to fill issuer automatically.");
+			applyStatus(statusBox, "status-success", "Wallet accounts loaded. Select one to fill issuer automatically.");
 		} catch (error) {
 			const mapped = mapRegistrationError(error);
 			applyStatus(statusBox, "status-error", mapped.message);
@@ -238,7 +262,8 @@ function wireRegistrationPage() {
 			});
 
 			if (result.status !== "confirmed") {
-				applyStatus(statusBox, "status-error", result.message);
+				const detail = result.rawError ? ` (${result.rawError})` : "";
+				applyStatus(statusBox, "status-error", result.message + detail);
 				return;
 			}
 
@@ -249,8 +274,8 @@ function wireRegistrationPage() {
 			resultBlock.hidden = false;
 			applyStatus(statusBox, "status-success", result.message);
 		} catch (error) {
-			const mapped = mapRegistrationError(error);
-			applyStatus(statusBox, "status-error", mapped.message);
+			const raw = error instanceof Error ? error.message : String(error);
+			applyStatus(statusBox, "status-error", raw);
 		}
 	}
 
