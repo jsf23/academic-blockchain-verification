@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Verificar Certificado | Registro de Integridad Académica</title>
+	<link rel="stylesheet" href="./css/app.css" />
+</head>
+
+<body data-page="verify">
+	<main class="shell shell-form">
+		<header class="page-header">
+			<a class="back-link" href="./index.html">Volver al inicio</a>
+			<p class="eyebrow">Portal público</p>
+			<h1>Verificar certificado</h1>
+			<p class="lede">Pega la huella SHA-256 del certificado para comprobar si está registrada en el sistema.
+				No necesitas cuenta.</p>
+		</header>
+
+		<section class="panel-grid verify-layout">
+			<article class="panel-card">
+				<h2>Paso 1 &mdash; Pegar la huella del certificado</h2>
+				<p>Una huella es un código de 64 caracteres que inicia con <code>0x</code>. Puedes solicitarla a la institución
+					que emitió el certificado.</p>
+
+				<form id="verifyForm" novalidate>
+					<div class="form-stack">
+						<label class="form-label" for="certificateHash">Huella del certificado (SHA-256)</label>
+						<textarea id="certificateHash" name="certificateHash" class="form-input form-input-mono" rows="3"
+							placeholder="0x..." autocomplete="off" spellcheck="false" aria-describedby="hashHint"></textarea>
+						<p id="hashHint" class="form-hint">Debe ser una cadena hexadecimal de 66 caracteres que inicie con 0x
+							(ejemplo: 0xabc123...)
+						</p>
+					</div>
+
+					<div class="form-stack" style="margin-top: 1.25rem;">
+						<button type="submit" id="verifyButton" class="primary-button button-like">
+							Comprobar autenticidad
+						</button>
+					</div>
+				</form>
+			</article>
+
+			<article class="panel-card">
+				<h2>Paso 2 &mdash; Resultado de verificación</h2>
+				<p>El sistema confirmará si esta huella coincide con un certificado oficial.</p>
+
+				<div id="verifyStatus" class="status-box status-idle" role="status" aria-live="polite">Esperando una
+					huella&hellip;</div>
+
+				<div id="verifyResultValid" class="verify-result verify-result-valid" hidden>
+					<div class="verify-badge verify-badge-valid" aria-label="Certificado auténtico">
+						<span class="verify-badge-icon" aria-hidden="true">&#10003;</span>
+						<span class="verify-badge-label">Certificado auténtico</span>
+					</div>
+					<dl class="result-grid" id="verifyResultData">
+						<div class="result-item">
+							<dt>Huella</dt>
+							<dd id="resultHash">&mdash;</dd>
+						</div>
+						<div class="result-item">
+							<dt>Institución emisora</dt>
+							<dd id="resultIssuer">&mdash;</dd>
+						</div>
+						<div class="result-item">
+							<dt>Registrado el</dt>
+							<dd id="resultDate">&mdash;</dd>
+						</div>
+						<div class="result-item">
+							<dt>Estado</dt>
+							<dd id="resultValidity">&mdash;</dd>
+						</div>
+					</dl>
+				</div>
+
+				<div id="verifyResultNotFound" class="verify-result verify-result-notfound" hidden>
+					<div class="verify-badge verify-badge-notfound" aria-label="Certificado no encontrado">
+						<span class="verify-badge-icon" aria-hidden="true">&#63;</span>
+						<span class="verify-badge-label">No se encontró registro</span>
+					</div>
+					<p class="verify-explanation" id="verifyNotFoundMessage">No existe prueba de autenticidad para esta huella en
+						el sistema.</p>
+				</div>
+
+				<div id="verifyResultError" class="verify-result verify-result-error" hidden>
+					<div class="verify-badge verify-badge-error" aria-label="Error de verificación">
+						<span class="verify-badge-icon" aria-hidden="true">&#33;</span>
+						<span class="verify-badge-label">No se pudo verificar</span>
+					</div>
+					<p class="verify-explanation" id="verifyErrorMessage">Se produjo un error durante la verificación.</p>
+				</div>
+			</article>
+		</section>
+	</main>
+
+	<script type="module" src="./js/app.js"></script>
+	<script type="module" src="./js/verify.js"></script>
+</body>
+
+</html>

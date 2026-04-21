@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Registrar Certificado | Registro de Integridad Académica</title>
+	<link rel="stylesheet" href="./css/app.css" />
+</head>
+
+<body data-page="register">
+	<main class="shell shell-form">
+		<header class="page-header">
+			<a class="back-link" href="./index.html">Volver al inicio</a>
+			<p class="eyebrow">Espacio de la institución emisora</p>
+			<h1>Registrar huella de certificado</h1>
+			<p class="lede">Carga el documento de forma local, genera la huella SHA-256 en el navegador y prepárala para
+				su registro en blockchain.</p>
+		</header>
+
+		<section class="panel-grid register-layout">
+			<article class="panel-card">
+				<h2>Paso 1</h2>
+				<p>Selecciona el documento académico y genera la huella SHA-256 de forma local.</p>
+				<form id="registrationForm" class="form-stack" novalidate>
+					<label class="form-label" for="certificateFile">Archivo del certificado</label>
+					<input id="certificateFile" name="certificateFile" class="form-input" type="file" required />
+
+					<label class="form-label" for="issuerAddress">Dirección de billetera emisora</label>
+					<div class="inline-actions">
+						<button id="loadAccountsButton" class="secondary-link button-like compact-button" type="button">
+							Usar cuenta de Ganache
+						</button>
+					</div>
+					<select id="ganacheAccounts" class="form-input form-input-mono" aria-label="Cuentas de Ganache">
+						<option value="">Selecciona una cuenta activa de Ganache...</option>
+					</select>
+					<input id="issuerAddress" name="issuerAddress" class="form-input form-input-mono" type="text"
+						placeholder="0x..." autocomplete="off" required />
+
+					<button id="generateHashButton" class="primary-link button-like" type="button">
+						Generar huella
+					</button>
+
+					<label class="form-label" for="certificateHash">Huella SHA-256 generada</label>
+					<input id="certificateHash" name="certificateHash" class="form-input form-input-mono" type="text"
+						placeholder="0x..." autocomplete="off" readonly />
+
+					<button id="submitRegistrationButton" class="secondary-link button-like" type="submit">
+						Registrar en blockchain
+					</button>
+				</form>
+			</article>
+			<article class="panel-card">
+				<h2>Paso 2</h2>
+				<p>Revisa la autorización y el estado de la transacción.</p>
+				<div id="registrationStatus" class="status-box status-idle" role="status" aria-live="polite">
+					Esperando datos.
+				</div>
+				<dl class="result-grid" id="registrationResult" hidden>
+					<div>
+						<dt>Huella</dt>
+						<dd id="resultHash">-</dd>
+					</div>
+					<div>
+						<dt>Emisor</dt>
+						<dd id="resultIssuer">-</dd>
+					</div>
+					<div>
+						<dt>Fecha</dt>
+						<dd id="resultDate">-</dd>
+					</div>
+					<div>
+						<dt>Transacción</dt>
+						<dd id="resultTx">-</dd>
+					</div>
+				</dl>
+			</article>
+		</section>
+	</main>
+
+	<script type="module" src="./js/app.js"></script>
+	<script type="module" src="./js/register.js"></script>
+</body>
+
+</html>

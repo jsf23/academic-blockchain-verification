@@ -63,24 +63,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
-
 # Environments
 .env
 .env*
@@ -91,24 +73,6 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
 
 # IDE
 .vscode/
@@ -122,7 +86,13 @@ dmypy.json
 Thumbs.db
 *.tmp
 
-# Project specific
-*.pdf
-output/
-results/
+# Node / JavaScript
+node_modules/
+coverage/
+.nyc_output/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+artifacts/
+frontend/contract-config.json
