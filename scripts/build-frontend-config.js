@@ -50,6 +50,11 @@ async function main() {
 	const contractAddress = pickPreferredValue(process.env.CONTRACT_ADDRESS, artifact?.contractAddress, "");
 	const contractAbi = Array.isArray(artifact?.abi) ? artifact.abi : [];
 	const preferWalletProvider = (process.env.PREFER_WALLET_PROVIDER ?? "true").toLowerCase() !== "false";
+	const institutionalIssuerAddress = pickPreferredValue(
+		process.env.INSTITUTIONAL_ISSUER_ADDRESS,
+		process.env.UNIVERSITY_ISSUER_ADDRESS,
+		""
+	);
 	const networkMismatch = chainId !== null && artifact?.networkId !== undefined && Number(artifact.networkId) !== Number(chainId);
 
 	const runtimeConfig = {
@@ -57,7 +62,8 @@ async function main() {
 		chainId,
 		contractAddress,
 		contractAbi,
-		preferWalletProvider
+		preferWalletProvider,
+		institutionalIssuerAddress
 	};
 
 	await fs.writeFile(outputPath, `${JSON.stringify(runtimeConfig, null, 2)}\n`, "utf8");
@@ -68,6 +74,7 @@ async function main() {
 		contractAddress,
 		hasRpcUrl: Boolean(rpcUrl),
 		preferWalletProvider,
+		hasInstitutionalIssuerAddress: Boolean(institutionalIssuerAddress),
 		networkMismatch
 	}, null, 2));
 }

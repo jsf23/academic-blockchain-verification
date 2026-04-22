@@ -5,6 +5,7 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Registrar Certificado | Registro de Integridad Académica</title>
+	<link rel="icon" type="image/png" href="https://www.unad.edu.co/images/footer/favicon.png" />
 	<link rel="stylesheet" href="./css/app.css" />
 </head>
 
@@ -20,42 +21,78 @@
 
 		<section class="panel-grid register-layout">
 			<article class="panel-card">
-				<h2>Paso 1</h2>
-				<p>Selecciona el documento académico y genera la huella SHA-256 de forma local.</p>
+				<h2>Ruta guiada de registro</h2>
+				<p>Sigue estos pasos en orden para preparar la huella, confirmar la cuenta institucional y registrar el
+					certificado.</p>
 				<form id="registrationForm" class="form-stack" novalidate>
-					<label class="form-label" for="certificateFile">Archivo del certificado</label>
-					<input id="certificateFile" name="certificateFile" class="form-input" type="file" required />
+					<div class="step-flow" aria-label="Pasos para registrar un certificado">
+						<section class="step-card">
+							<div class="step-number">1</div>
+							<div class="step-content">
+								<h3 class="step-title">Seleccionar el archivo</h3>
+								<label class="form-label" for="certificateFile">Archivo del certificado</label>
+								<input id="certificateFile" name="certificateFile" class="form-input" type="file" required />
+							</div>
+						</section>
 
-					<label class="form-label" for="issuerAddress">Dirección de billetera emisora</label>
-					<div class="inline-actions">
-						<button id="loadAccountsButton" class="secondary-link button-like compact-button" type="button">
-							Usar cuenta de wallet
-						</button>
+						<section class="step-card">
+							<div class="step-number">2</div>
+							<div class="step-content">
+								<h3 class="step-title">Cuenta institucional activa</h3>
+								<p class="step-text">La dirección emisora se define por configuración y no puede cambiarse desde este
+									formulario.</p>
+								<label class="form-label" for="issuerAddress">Dirección de billetera emisora</label>
+								<input id="issuerAddress" name="issuerAddress" class="form-input form-input-mono" type="text"
+									placeholder="0x..." autocomplete="off" readonly required />
+								<p id="institutionalIssuerHint" class="step-text" aria-live="polite">Cargando cuenta institucional del
+									entorno...</p>
+							</div>
+						</section>
+
+						<section class="step-card">
+							<div class="step-number">3</div>
+							<div class="step-content">
+								<h3 class="step-title">Generar la huella</h3>
+								<p class="step-text">La huella SHA-256 se crea localmente en tu navegador.</p>
+								<button id="generateHashButton" class="primary-link button-like" type="button">
+									Generar huella
+								</button>
+							</div>
+						</section>
+
+						<section class="step-card">
+							<div class="step-number">4</div>
+							<div class="step-content">
+								<h3 class="step-title">Copiar el hash</h3>
+								<label class="form-label" for="certificateHash">Huella SHA-256 generada</label>
+								<div class="input-action-row">
+									<input id="certificateHash" name="certificateHash" class="form-input form-input-mono" type="text"
+										placeholder="0x..." autocomplete="off" readonly />
+									<button id="copyHashButton" class="secondary-link compact-button" type="button">Copiar hash</button>
+								</div>
+							</div>
+						</section>
 					</div>
-					<select id="ganacheAccounts" class="form-input form-input-mono" aria-label="Cuentas disponibles de wallet">
-						<option value="">Selecciona una cuenta disponible de wallet...</option>
-					</select>
-					<input id="issuerAddress" name="issuerAddress" class="form-input form-input-mono" type="text"
-						placeholder="0x..." autocomplete="off" required />
 
-					<button id="generateHashButton" class="primary-link button-like" type="button">
-						Generar huella
-					</button>
+					<div id="preRegistrationNotice" class="floating-note floating-note-hidden" role="status" aria-live="polite"
+						hidden></div>
 
-					<label class="form-label" for="certificateHash">Huella SHA-256 generada</label>
-					<input id="certificateHash" name="certificateHash" class="form-input form-input-mono" type="text"
-						placeholder="0x..." autocomplete="off" readonly />
-
-					<button id="submitRegistrationButton" class="secondary-link button-like" type="submit">
+					<button id="submitRegistrationButton"
+						class="primary-button button-like register-submit register-submit-primary" type="submit">
 						Registrar en blockchain
 					</button>
 				</form>
+				<ul class="micro-list" aria-label="Recomendaciones antes de registrar">
+					<li>Confirma que la cuenta institucional configurada sea autorizada antes de enviar.</li>
+					<li>Revisa que la huella comience por <code>0x</code> y tenga 66 caracteres.</li>
+					<li>No compartas archivos originales en este flujo: solo se registra su huella.</li>
+				</ul>
 			</article>
 			<article class="panel-card">
-				<h2>Paso 2</h2>
-				<p>Revisa la autorización y el estado de la transacción.</p>
+				<h2>Resultado del registro</h2>
+				<p>Este panel queda reservado para la validación final y el resultado del envío a blockchain.</p>
 				<div id="registrationStatus" class="status-box status-idle" role="status" aria-live="polite">
-					Esperando datos.
+					Aún no se ha enviado ningún registro a blockchain.
 				</div>
 				<dl class="result-grid" id="registrationResult" hidden>
 					<div>

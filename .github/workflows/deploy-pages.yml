@@ -1,0 +1,72 @@
+name: Deploy Frontend to GitHub Pages
+
+on:
+	workflow_dispatch:
+	push:
+		branches:
+			- main
+
+permissions:
+	contents: read
+	pages: write
+	id-token: write
+
+concurrency:
+	group: github-pages
+	cancel-in-progress: true
+
+jobs:
+	build:
+		runs-on: ubuntu-latest
+		environment: github-pages
+		steps:
+			- name: Checkout repository
+			  uses: actions/checkout@v4
+
+			- name: Setup Node.js
+			  uses: actions/setup-node@v4
+			  with:
+				node-version-file: .nvmrc
+				cache: npm
+
+			- name: Configure GitHub Pages
+			  uses: actions/configure-pages@v5
+
+			- name: Install dependencies
+			  run: npm ci
+
+			- name: Validate public deployment config
+			  env:
+				PUBLIC_RPC_URL: ${{ vars.PUBLIC_RPC_URL }}
+				PUBLIC_CHAIN_ID: ${{ vars.PUBLIC_CHAIN_ID }}
+				PUBLIC_CONTRACT_ADDRESS: ${{ vars.PUBLIC_CONTRACT_ADDRESS }}
+				PUBLIC_CONTRACT_ABI_JSON: ${{ vars.PUBLIC_CONTRACT_ABI_JSON }}
+				PUBLIC_INSTITUTIONAL_ISSUER_ADDRESS: ${{ vars.PUBLIC_INSTITUTIONAL_ISSUER_ADDRESS }}
+				PUBLIC_PREFER_WALLET_PROVIDER: ${{ vars.PUBLIC_PREFER_WALLET_PROVIDER }}
+			  run: npm run validate:public-config
+
+			- name: Build GitHub Pages artifact
+			  env:
+				PUBLIC_RPC_URL: ${{ vars.PUBLIC_RPC_URL }}
+				PUBLIC_CHAIN_ID: ${{ vars.PUBLIC_CHAIN_ID }}
+				PUBLIC_CONTRACT_ADDRESS: ${{ vars.PUBLIC_CONTRACT_ADDRESS }}
+				PUBLIC_CONTRACT_ABI_JSON: ${{ vars.PUBLIC_CONTRACT_ABI_JSON }}
+				PUBLIC_INSTITUTIONAL_ISSUER_ADDRESS: ${{ vars.PUBLIC_INSTITUTIONAL_ISSUER_ADDRESS }}
+				PUBLIC_PREFER_WALLET_PROVIDER: ${{ vars.PUBLIC_PREFER_WALLET_PROVIDER }}
+			  run: npm run build:pages
+
+			- name: Upload Pages artifact
+			  uses: actions/upload-pages-artifact@v3
+			  with:
+				path: dist/pages
+
+	deploy:
+		needs: build
+		runs-on: ubuntu-latest
+		environment:
+			name: github-pages
+			url: ${{ steps.deployment.outputs.page_url }}
+		steps:
+			- name: Deploy to GitHub Pages
+			  id: deployment
+			  uses: actions/deploy-pages@v4
