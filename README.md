@@ -65,7 +65,7 @@ Configura estas Repository Variables antes del primer deploy:
 - `PUBLIC_CONTRACT_ADDRESS`
 - `PUBLIC_CONTRACT_ABI_JSON`
 - `PUBLIC_INSTITUTIONAL_ISSUER_ADDRESS`
-- `PUBLIC_PREFER_WALLET_PROVIDER`
+- `PUBLIC_PREFER_WALLET_PROVIDER` 
 
 Todos esos valores deben tratarse como publicos porque terminan en `contract-config.json` dentro del sitio publicado.
 
