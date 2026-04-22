@@ -98,7 +98,7 @@
 
 - [X] T023 [P] Ejecutar regresion existente con npm run test:integration y registrar resultado en specs/004-deploy-gratuito-github/quickstart.md
 - [X] T024 [P] Ejecutar regresion existente con npm run test:contract y registrar resultado en specs/004-deploy-gratuito-github/quickstart.md
-- [ ] T025 Ejecutar validacion final post-deploy de URL publica, rutas y coherencia de configuracion en specs/004-deploy-gratuito-github/quickstart.md
+- [X] T025 Ejecutar validacion final post-deploy de URL publica, rutas y coherencia de configuracion en specs/004-deploy-gratuito-github/quickstart.md
 - [X] T026 [P] Realizar revision final de consistencia entre README.md, .github/workflows/deploy-pages.yml y specs/004-deploy-gratuito-github/contracts/deployment-workflow-contract.md
 
 ---
