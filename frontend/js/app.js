@@ -3,22 +3,23 @@ const DEFAULT_CONFIG = {
 	chainId: null,
 	contractAddress: "",
 	contractAbi: [],
-	preferWalletProvider: true
+	preferWalletProvider: true,
+	institutionalIssuerAddress: ""
 };
 
 const DEFAULT_MESSAGES = {
-	missingConfig: "The blockchain connection is not configured yet.",
-	networkUnavailable: "The local blockchain is not reachable right now.",
-	walletUnavailable: "No issuer wallet is connected yet.",
-	verificationMissing: "No certificate proof exists for that hash.",
-	technicalFallback: "Something went wrong. Please try again in a moment.",
-	registrationSuccess: "Certificate fingerprint was registered successfully.",
-	registrationWorking: "Submitting registration to the blockchain...",
-	registrationHashReady: "Fingerprint generated. You can register it now.",
-	verificationWorking: "Checking the registry... this may take a few seconds.",
-	verificationValid: "Certificate found - authenticity confirmed.",
-	verificationNotFound: "No record found for this fingerprint.",
-	invalidHashFormat: "Enter a valid SHA-256 fingerprint (64 hex characters starting with 0x)."
+	missingConfig: "La conexión con blockchain aún no está configurada.",
+	networkUnavailable: "La blockchain local no está disponible en este momento.",
+	walletUnavailable: "Aún no hay una wallet emisora conectada.",
+	verificationMissing: "No existe una prueba del certificado para ese hash.",
+	technicalFallback: "Ocurrió un problema. Inténtalo de nuevo en un momento.",
+	registrationSuccess: "La huella del certificado se registró correctamente.",
+	registrationWorking: "Enviando el registro a la blockchain...",
+	registrationHashReady: "La huella ya fue generada. Ahora puedes registrarla.",
+	verificationWorking: "Consultando el registro... esto puede tardar unos segundos.",
+	verificationValid: "Certificado encontrado: autenticidad confirmada.",
+	verificationNotFound: "No se encontró un registro para esta huella.",
+	invalidHashFormat: "Ingresa una huella SHA-256 válida (64 caracteres hexadecimales que comiencen con 0x)."
 };
 
 async function loadRuntimeConfig() {
@@ -50,10 +51,10 @@ function humanizeError(error) {
 
 function formatUnixTimestamp(timestamp) {
 	if (!timestamp) {
-		return "Not available";
+		return "No disponible";
 	}
 
-	return new Intl.DateTimeFormat("en", {
+	return new Intl.DateTimeFormat("es-CO", {
 		dateStyle: "medium",
 		timeStyle: "short"
 	}).format(new Date(Number(timestamp) * 1000));

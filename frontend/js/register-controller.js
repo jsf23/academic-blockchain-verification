@@ -7,7 +7,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "UNAUTHORIZED",
-			message: "The selected wallet is not authorized to register certificates."
+			message: "La cuenta institucional no está autorizada para registrar certificados."
 		};
 	}
 
@@ -15,7 +15,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "DUPLICATE_HASH",
-			message: "This fingerprint already exists in the registry."
+			message: "Esta huella ya existe en el registro."
 		};
 	}
 
@@ -23,15 +23,19 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "INVALID_HASH",
-			message: "A valid SHA-256 fingerprint is required."
+			message: "Se requiere una huella SHA-256 válida."
 		};
 	}
 
 	return {
 		status: "failed",
 		errorCode: "TRANSACTION_REJECTED",
-		message: "The registration transaction could not be completed."
+		message: "No fue posible completar la transacción de registro."
 	};
+}
+
+function isEthereumAddress(value) {
+	return /^0x[a-fA-F0-9]{40}$/.test((value ?? "").trim());
 }
 
 export function createRegistrationController(dependencies) {
@@ -47,7 +51,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "Select a certificate file before generating the fingerprint."
+				message: "Selecciona un archivo de certificado antes de generar la huella."
 			};
 		}
 
@@ -57,7 +61,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "The generated fingerprint is not valid bytes32 format."
+				message: "La huella generada no tiene un formato bytes32 válido."
 			};
 		}
 
@@ -72,7 +76,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "Generate a valid SHA-256 fingerprint before registration."
+				message: "Genera una huella SHA-256 válida antes de registrar."
 			};
 		}
 
@@ -80,7 +84,15 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "WALLET_UNAVAILABLE",
-				message: "Provide an issuer wallet address to continue."
+				message: "No hay una cuenta institucional emisora configurada para continuar."
+			};
+		}
+
+		if (!isEthereumAddress(issuerAddress)) {
+			return {
+				status: "failed",
+				errorCode: "WALLET_UNAVAILABLE",
+				message: "La cuenta institucional configurada no tiene un formato de dirección EVM válido."
 			};
 		}
 
@@ -90,7 +102,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "UNAUTHORIZED",
-				message: "The issuer wallet is not authorized in this registry."
+				message: "La cuenta institucional no está autorizada en este registro."
 			};
 		}
 
@@ -112,8 +124,8 @@ export function createRegistrationController(dependencies) {
 			certificateHash: registrationEvent?.hash ?? hash,
 			issuerAddress: registrationEvent?.issuer ?? issuerAddress,
 			issuedAt: formatTimestamp(issuedTimestamp),
-			transactionHash: submission.receipt?.transactionHash ?? "Not available",
-			message: "Certificate fingerprint was registered successfully."
+			transactionHash: submission.receipt?.transactionHash ?? "No disponible",
+			message: "La huella del certificado se registró correctamente."
 		};
 	}
 

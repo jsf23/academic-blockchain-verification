@@ -1,7 +1,7 @@
 const VALID_HASH_RE = /^0x[0-9a-fA-F]{64}$/;
 
 function defaultFormatTimestamp(ts) {
-	return ts ? new Date(Number(ts) * 1000).toLocaleString() : "Not available";
+	return ts ? new Date(Number(ts) * 1000).toLocaleString("es-CO") : "No disponible";
 }
 
 export function isValidHashFormat(hash) {
@@ -12,7 +12,7 @@ export function mapVerificationResult(rawResult, hash, formatTimestamp = default
 	if (!rawResult.exists) {
 		return {
 			status: "not-found",
-			message: "No authenticity proof exists for this fingerprint in the registry.",
+			message: "No existe una prueba de autenticidad para esta huella en el registro.",
 			hash
 		};
 	}
@@ -23,7 +23,7 @@ export function mapVerificationResult(rawResult, hash, formatTimestamp = default
 		issuerAddress: rawResult.institution,
 		issuedAt: formatTimestamp(rawResult.date),
 		isValid: Boolean(rawResult.isValid),
-		message: "This certificate fingerprint has been verified and is authentic.",
+		message: "La huella de este certificado fue verificada y es auténtica.",
 		hash
 	};
 }
@@ -35,7 +35,7 @@ export function classifyVerifyError(error) {
 		return {
 			status: "error",
 			errorCode: "CONTRACT_UNAVAILABLE",
-			message: "The registry contract is not reachable. Make sure your configured network and contract address are correct."
+			message: "No es posible acceder al contrato del registro. Verifica que la red y la dirección del contrato sean correctas."
 		};
 	}
 
@@ -49,14 +49,14 @@ export function classifyVerifyError(error) {
 		return {
 			status: "error",
 			errorCode: "NETWORK_UNAVAILABLE",
-			message: "The configured blockchain network is not reachable right now."
+			message: "La red blockchain configurada no está disponible en este momento."
 		};
 	}
 
 	return {
 		status: "error",
 		errorCode: "CONTRACT_UNAVAILABLE",
-		message: "The verification could not be completed. Please try again."
+		message: "No fue posible completar la verificación. Inténtalo de nuevo."
 	};
 }
 
@@ -73,7 +73,7 @@ export function createVerificationController(dependencies) {
 			return {
 				status: "error",
 				errorCode: "INVALID_HASH_FORMAT",
-				message: "Please enter a valid SHA-256 fingerprint (64 hex characters, starting with 0x)."
+				message: "Ingresa una huella SHA-256 válida (64 caracteres hexadecimales que comiencen con 0x)."
 			};
 		}
 
@@ -81,7 +81,7 @@ export function createVerificationController(dependencies) {
 			return {
 				status: "error",
 				errorCode: "CONTRACT_UNAVAILABLE",
-				message: "The verification service is not configured."
+				message: "El servicio de verificación no está configurado."
 			};
 		}
 

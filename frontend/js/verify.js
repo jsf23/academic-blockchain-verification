@@ -55,23 +55,23 @@ function wireVerificationPage() {
 		const hash = (hashInput.value ?? "").trim();
 
 		hideAllResults(resultValid, resultNotFound, resultError);
-		applyStatus(statusBox, "status-working", getUserMessage("verificationWorking", "Checking the registry... this may take a few seconds."));
+		applyStatus(statusBox, "status-working", getUserMessage("verificationWorking", "Consultando el registro... esto puede tardar unos segundos."));
 		verifyButton.disabled = true;
 
 		try {
 			const result = await controller.submit({ hash });
 
 			if (result.status === "valid") {
-				applyStatus(statusBox, "status-success", getUserMessage("verificationValid", "Certificate found - authenticity confirmed."));
+				applyStatus(statusBox, "status-success", getUserMessage("verificationValid", "Certificado encontrado: autenticidad confirmada."));
 
 				resultHash.textContent = result.hash ?? "\u2014";
 				resultIssuer.textContent = result.issuerAddress ?? "\u2014";
 				resultDate.textContent = result.issuedAt ?? "\u2014";
-				resultValidity.textContent = result.isValid ? "Valid" : "Revoked";
+				resultValidity.textContent = result.isValid ? "Válido" : "Revocado";
 
 				resultValid.hidden = false;
 			} else if (result.status === "not-found") {
-				applyStatus(statusBox, "status-error", getUserMessage("verificationNotFound", "No record found for this fingerprint."));
+				applyStatus(statusBox, "status-error", getUserMessage("verificationNotFound", "No se encontró un registro para esta huella."));
 				notFoundMessage.textContent = result.message;
 				resultNotFound.hidden = false;
 			} else {
@@ -80,8 +80,8 @@ function wireVerificationPage() {
 				resultError.hidden = false;
 			}
 		} catch (unexpectedError) {
-			applyStatus(statusBox, "status-error", "An unexpected error occurred. Please try again.");
-			errorMessage.textContent = "Verification could not be completed. Please check your connection and try again.";
+			applyStatus(statusBox, "status-error", "Ocurrió un error inesperado. Inténtalo de nuevo.");
+			errorMessage.textContent = "No fue posible completar la verificación. Revisa tu conexión e inténtalo de nuevo.";
 			resultError.hidden = false;
 		} finally {
 			verifyButton.disabled = false;

@@ -5,6 +5,7 @@
 	<meta charset="UTF-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 	<title>Verificar Certificado | Registro de Integridad Académica</title>
+	<link rel="icon" type="image/png" href="https://www.unad.edu.co/images/footer/favicon.png" />
 	<link rel="stylesheet" href="./css/app.css" />
 </head>
 
@@ -20,7 +21,7 @@
 
 		<section class="panel-grid verify-layout">
 			<article class="panel-card">
-				<h2>Paso 1 &mdash; Pegar la huella del certificado</h2>
+				<h2><span class="step-chip">Paso 1</span> Pegar la huella del certificado</h2>
 				<p>Una huella es un código de 64 caracteres que inicia con <code>0x</code>. Puedes solicitarla a la institución
 					que emitió el certificado.</p>
 
@@ -32,9 +33,10 @@
 						<p id="hashHint" class="form-hint">Debe ser una cadena hexadecimal de 66 caracteres que inicie con 0x
 							(ejemplo: 0xabc123...)
 						</p>
+						<p class="verify-note">Tip: si cambias un solo carácter de la huella, el resultado dejará de coincidir.</p>
 					</div>
 
-					<div class="form-stack" style="margin-top: 1.25rem;">
+					<div class="form-stack form-stack-tight">
 						<button type="submit" id="verifyButton" class="primary-button button-like">
 							Comprobar autenticidad
 						</button>
@@ -43,7 +45,7 @@
 			</article>
 
 			<article class="panel-card">
-				<h2>Paso 2 &mdash; Resultado de verificación</h2>
+				<h2><span class="step-chip">Paso 2</span> Interpretar resultado</h2>
 				<p>El sistema confirmará si esta huella coincide con un certificado oficial.</p>
 
 				<div id="verifyStatus" class="status-box status-idle" role="status" aria-live="polite">Esperando una

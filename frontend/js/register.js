@@ -1,5 +1,5 @@
 import { formatUnixTimestamp, getUserMessage } from "./app.js";
-import { getAvailableAccounts, isAuthorizedIssuer, submitCertificateIssuance } from "./blockchain-service.js";
+import { isAuthorizedIssuer, submitCertificateIssuance } from "./blockchain-service.js";
 import { hashFileWithSha256, isBytes32Hex } from "./hash-service.js";
 
 export function mapRegistrationError(error) {
@@ -9,7 +9,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "UNAUTHORIZED",
-			message: "The selected wallet is not authorized to register certificates."
+			message: "La cuenta institucional no está autorizada para registrar certificados."
 		};
 	}
 
@@ -17,7 +17,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "DUPLICATE_HASH",
-			message: "This fingerprint already exists in the registry."
+			message: "Esta huella ya existe en el registro."
 		};
 	}
 
@@ -25,7 +25,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "INVALID_HASH",
-			message: "A valid SHA-256 fingerprint is required."
+			message: "Se requiere una huella SHA-256 válida."
 		};
 	}
 
@@ -37,7 +37,7 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "CONTRACT_UNAVAILABLE",
-			message: "Configuration is incomplete. Verify contractAddress, ABI, and network settings in contract-config.json."
+			message: "La configuración está incompleta. Verifica contractAddress, ABI y la red en contract-config.json."
 		};
 	}
 
@@ -45,14 +45,14 @@ export function mapRegistrationError(error) {
 		return {
 			status: "failed",
 			errorCode: "NETWORK_UNAVAILABLE",
-			message: "Wallet network does not match the configured contract network. Switch network and try again."
+			message: "La red de la wallet no coincide con la red configurada del contrato. Cambia de red e inténtalo de nuevo."
 		};
 	}
 
 	return {
 		status: "failed",
 		errorCode: "TRANSACTION_REJECTED",
-		message: "We could not complete the registration. Please check your wallet/network connection and try again."
+		message: "No fue posible completar el registro. Revisa tu conexión con la wallet o la red e inténtalo de nuevo."
 	};
 }
 
@@ -68,7 +68,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "Select a certificate file before generating the fingerprint."
+				message: "Selecciona un archivo de certificado antes de generar la huella."
 			};
 		}
 
@@ -78,7 +78,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "The generated fingerprint is not valid bytes32 format."
+				message: "La huella generada no tiene un formato bytes32 válido."
 			};
 		}
 
@@ -93,7 +93,7 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "INVALID_HASH",
-				message: "Generate a valid SHA-256 fingerprint before registration."
+				message: "Genera una huella SHA-256 válida antes de registrar."
 			};
 		}
 
@@ -101,7 +101,15 @@ export function createRegistrationController(dependencies) {
 			return {
 				status: "failed",
 				errorCode: "WALLET_UNAVAILABLE",
-				message: "Provide an issuer wallet address to continue."
+				message: "No hay una cuenta institucional emisora configurada para continuar."
+			};
+		}
+
+		if (!isEthereumAddress(issuerAddress)) {
+			return {
+				status: "failed",
+				errorCode: "WALLET_UNAVAILABLE",
+				message: "La cuenta institucional configurada no tiene un formato de dirección EVM válido."
 			};
 		}
 
@@ -111,7 +119,7 @@ export function createRegistrationController(dependencies) {
 				return {
 					status: "failed",
 					errorCode: "UNAUTHORIZED",
-					message: "The issuer wallet is not authorized in this registry."
+					message: "La cuenta institucional no está autorizada en este registro."
 				};
 			}
 		} catch {
@@ -137,8 +145,8 @@ export function createRegistrationController(dependencies) {
 			certificateHash: registrationEvent?.hash ?? hash,
 			issuerAddress: registrationEvent?.issuer ?? issuerAddress,
 			issuedAt: formatUnixTimestamp(issuedTimestamp),
-			transactionHash: submission.receipt?.transactionHash ?? "Not available",
-			message: getUserMessage("registrationSuccess", "Certificate fingerprint was registered successfully.")
+			transactionHash: submission.receipt?.transactionHash ?? "No disponible",
+			message: getUserMessage("registrationSuccess", "La huella del certificado se registró correctamente.")
 		};
 	}
 
@@ -158,6 +166,17 @@ function applyStatus(element, styleClass, text) {
 	element.textContent = text;
 }
 
+function applyFloatingNote(element, styleClass, text) {
+	if (!element) {
+		return;
+	}
+
+	element.hidden = false;
+	element.classList.remove("floating-note-hidden", "floating-note-info", "floating-note-success", "floating-note-error");
+	element.classList.add(styleClass);
+	element.textContent = text;
+}
+
 function normalizeIssuerAddress(value) {
 	const compact = (value ?? "").trim().replace(/[\s,;]+/g, "");
 
@@ -170,6 +189,14 @@ function normalizeIssuerAddress(value) {
 	}
 
 	return `0x${compact.replace(/[^a-fA-F0-9]/g, "")}`;
+}
+
+function isEthereumAddress(value) {
+	return /^0x[a-fA-F0-9]{40}$/.test((value ?? "").trim());
+}
+
+function getInstitutionalIssuerAddress() {
+	return normalizeIssuerAddress(window.AcademicIntegrityApp?.config?.institutionalIssuerAddress ?? "");
 }
 
 function wireRegistrationPage() {
@@ -187,9 +214,10 @@ function wireRegistrationPage() {
 	const fileInput = document.getElementById("certificateFile");
 	const hashInput = document.getElementById("certificateHash");
 	const issuerInput = document.getElementById("issuerAddress");
-	const loadAccountsButton = document.getElementById("loadAccountsButton");
-	const accountsSelect = document.getElementById("ganacheAccounts");
+	const issuerHint = document.getElementById("institutionalIssuerHint");
 	const generateButton = document.getElementById("generateHashButton");
+	const copyHashButton = document.getElementById("copyHashButton");
+	const preRegistrationNotice = document.getElementById("preRegistrationNotice");
 	const statusBox = document.getElementById("registrationStatus");
 	const resultBlock = document.getElementById("registrationResult");
 	const resultHash = document.getElementById("resultHash");
@@ -198,61 +226,73 @@ function wireRegistrationPage() {
 	const resultTx = document.getElementById("resultTx");
 
 	const controller = createRegistrationController();
+	const institutionalIssuerAddress = getInstitutionalIssuerAddress();
+	const hasInstitutionalIssuer = Boolean(institutionalIssuerAddress);
+	const institutionalIssuerIsValid = isEthereumAddress(institutionalIssuerAddress);
 
-	async function handleLoadAccounts() {
-		applyStatus(statusBox, "status-working", "Loading available wallet accounts...");
+	if (issuerInput) {
+		issuerInput.value = institutionalIssuerAddress;
+		issuerInput.readOnly = true;
+	}
 
-		try {
-			const accounts = await getAvailableAccounts();
-			accountsSelect.innerHTML = "";
-			const placeholder = document.createElement("option");
-			placeholder.value = "";
-			placeholder.textContent = "Select an available wallet account...";
-			accountsSelect.appendChild(placeholder);
-
-			for (const account of accounts) {
-				const option = document.createElement("option");
-				option.value = account;
-				option.textContent = account;
-				accountsSelect.appendChild(option);
-			}
-
-			if (accounts.length === 0) {
-				applyStatus(statusBox, "status-error", "No accounts are available in the active wallet/provider.");
-				return;
-			}
-
-			applyStatus(statusBox, "status-success", "Wallet accounts loaded. Select one to fill issuer automatically.");
-		} catch (error) {
-			const mapped = mapRegistrationError(error);
-			applyStatus(statusBox, "status-error", mapped.message);
+	if (!hasInstitutionalIssuer) {
+		if (issuerHint) {
+			issuerHint.textContent = "No hay cuenta institucional configurada para este entorno.";
 		}
+		applyFloatingNote(
+			preRegistrationNotice,
+			"floating-note-error",
+			"No hay cuenta institucional configurada. Define institutionalIssuerAddress en contract-config.json para continuar."
+		);
+	} else if (!institutionalIssuerIsValid) {
+		if (issuerHint) {
+			issuerHint.textContent = "La cuenta institucional configurada no tiene un formato de dirección EVM válido.";
+		}
+		applyFloatingNote(
+			preRegistrationNotice,
+			"floating-note-error",
+			"La cuenta institucional configurada es inválida. Debe tener formato 0x + 40 caracteres hexadecimales."
+		);
+	} else if (issuerHint) {
+		issuerHint.textContent = `Cuenta institucional activa: ${institutionalIssuerAddress}`;
 	}
 
 	async function handleGenerate() {
-		applyStatus(statusBox, "status-working", "Creating the certificate fingerprint...");
+		applyFloatingNote(preRegistrationNotice, "floating-note-info", "Generando la huella del certificado...");
 		const file = fileInput?.files?.[0];
 
 		try {
 			const result = await controller.generateHash(file);
 
 			if (result.status === "failed") {
-				applyStatus(statusBox, "status-error", result.message);
+				applyFloatingNote(preRegistrationNotice, "floating-note-error", result.message);
 				return;
 			}
 
 			hashInput.value = result.hash;
-			applyStatus(statusBox, "status-success", getUserMessage("registrationHashReady", "Fingerprint generated. You can register it now."));
+			applyFloatingNote(preRegistrationNotice, "floating-note-success", getUserMessage("registrationHashReady", "La huella ya fue generada. Ahora puedes registrarla."));
 		} catch (error) {
 			const mapped = mapRegistrationError(error);
-			applyStatus(statusBox, "status-error", mapped.message);
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", mapped.message);
 		}
 	}
 
 	async function handleSubmit(event) {
 		event.preventDefault();
-		issuerInput.value = normalizeIssuerAddress(issuerInput?.value ?? "");
-		applyStatus(statusBox, "status-working", getUserMessage("registrationWorking", "Submitting registration to the blockchain..."));
+		if (!hasInstitutionalIssuer) {
+			applyStatus(statusBox, "status-error", "No hay cuenta institucional configurada para registrar.");
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Configura la cuenta institucional antes de enviar el registro.");
+			return;
+		}
+
+		if (!institutionalIssuerIsValid) {
+			applyStatus(statusBox, "status-error", "La cuenta institucional configurada no tiene un formato válido.");
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Corrige la dirección institucional con formato 0x + 40 caracteres hexadecimales.");
+			return;
+		}
+
+		issuerInput.value = institutionalIssuerAddress;
+		applyStatus(statusBox, "status-working", getUserMessage("registrationWorking", "Enviando el registro a la blockchain..."));
 		resultBlock.hidden = true;
 
 		try {
@@ -262,8 +302,7 @@ function wireRegistrationPage() {
 			});
 
 			if (result.status !== "confirmed") {
-				const detail = result.rawError ? ` (${result.rawError})` : "";
-				applyStatus(statusBox, "status-error", result.message + detail);
+				applyStatus(statusBox, "status-error", result.message);
 				return;
 			}
 
@@ -274,25 +313,28 @@ function wireRegistrationPage() {
 			resultBlock.hidden = false;
 			applyStatus(statusBox, "status-success", result.message);
 		} catch (error) {
-			const raw = error instanceof Error ? error.message : String(error);
-			applyStatus(statusBox, "status-error", raw);
+			applyStatus(statusBox, "status-error", "No fue posible completar el registro. Inténtalo de nuevo.");
 		}
 	}
 
-	function handleAccountSelection() {
-		const selected = accountsSelect?.value ?? "";
+	async function handleCopyHash() {
+		const hash = hashInput?.value?.trim() ?? "";
 
-		if (!selected) {
+		if (!hash) {
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Primero genera la huella antes de intentar copiarla.");
 			return;
 		}
 
-		issuerInput.value = selected;
-		applyStatus(statusBox, "status-success", "Issuer field filled from active Ganache account.");
+		try {
+			await navigator.clipboard.writeText(hash);
+			applyFloatingNote(preRegistrationNotice, "floating-note-success", "La huella fue copiada al portapapeles.");
+		} catch {
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "No fue posible copiar la huella automáticamente. Cópiala manualmente.");
+		}
 	}
 
-	loadAccountsButton?.addEventListener("click", handleLoadAccounts);
-	accountsSelect?.addEventListener("change", handleAccountSelection);
 	generateButton?.addEventListener("click", handleGenerate);
+	copyHashButton?.addEventListener("click", handleCopyHash);
 	form?.addEventListener("submit", handleSubmit);
 }
 

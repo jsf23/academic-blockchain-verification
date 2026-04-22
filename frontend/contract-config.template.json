@@ -1,7 +1,8 @@
 {
-	"rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_API_KEY",
+	"rpcUrl": "https://eth-sepolia.g.alchemy.com/v2/YOUR_PUBLIC_ALCHEMY_APP_KEY",
 	"chainId": 11155111,
-	"contractAddress": "0xYOUR_DEPLOYED_CONTRACT_ADDRESS",
+	"contractAddress": "0xYOUR_PUBLIC_DEPLOYED_CONTRACT_ADDRESS",
+	"institutionalIssuerAddress": "0xYOUR_PUBLIC_UNIVERSITY_ISSUER_ADDRESS",
 	"contractAbi": [],
 	"preferWalletProvider": true
 }

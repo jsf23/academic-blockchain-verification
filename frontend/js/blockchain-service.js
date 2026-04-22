@@ -5,7 +5,8 @@ function getRuntimeConfig() {
 		rpcUrl: "",
 		contractAddress: "",
 		contractAbi: [],
-		preferWalletProvider: true
+		preferWalletProvider: true,
+		institutionalIssuerAddress: ""
 	};
 }
 
@@ -39,7 +40,7 @@ export function getWeb3Client() {
 		const { rpcUrl } = getRuntimeConfig();
 
 		if (!rpcUrl) {
-			throw new Error(window.AcademicIntegrityApp?.messages?.missingConfig ?? "Missing blockchain provider configuration.");
+			throw new Error(window.AcademicIntegrityApp?.messages?.missingConfig ?? "Falta la configuración del proveedor de blockchain.");
 		}
 
 		cachedWeb3 = new Web3(rpcUrl);
@@ -54,7 +55,7 @@ export function getRegistryContract() {
 	const { contractAbi, contractAddress } = getRuntimeConfig();
 
 	if (!contractAddress || !Array.isArray(contractAbi) || contractAbi.length === 0) {
-		throw new Error(window.AcademicIntegrityApp?.messages?.missingConfig ?? "Missing contract configuration.");
+		throw new Error(window.AcademicIntegrityApp?.messages?.missingConfig ?? "Falta la configuración del contrato.");
 	}
 
 	return new web3.eth.Contract(contractAbi, contractAddress);
@@ -106,41 +107,41 @@ export function classifyIssueError(error) {
 	if (message.includes("authorized issuer") || message.includes("not authorized")) {
 		return {
 			errorCode: "UNAUTHORIZED",
-			message: "This wallet is not authorized to register certificates."
+			message: "La cuenta institucional no está autorizada para registrar certificados."
 		};
 	}
 
 	if (message.includes("already registered") || message.includes("duplicate")) {
 		return {
 			errorCode: "DUPLICATE_HASH",
-			message: "This certificate hash already exists in the registry."
+			message: "Esta huella del certificado ya existe en el registro."
 		};
 	}
 
 	if (message.includes("hash is required") || message.includes("invalid")) {
 		return {
 			errorCode: "INVALID_HASH",
-			message: "The certificate hash is invalid. Generate a valid SHA-256 fingerprint first."
+			message: "La huella del certificado no es válida. Genera primero una huella SHA-256 válida."
 		};
 	}
 
 	if (message.includes("denied") || message.includes("rejected")) {
 		return {
 			errorCode: "TRANSACTION_REJECTED",
-			message: "The transaction was rejected before confirmation."
+			message: "La transacción fue rechazada antes de confirmarse."
 		};
 	}
 
 	if (message.includes("sender account not recognized") || message.includes("unknown account")) {
 		return {
 			errorCode: "WALLET_UNAVAILABLE",
-			message: "The issuer address is not available in the active provider. Connect and use an account from your current wallet/network."
+			message: "La cuenta institucional configurada no está disponible en el proveedor activo. Cambia a la cuenta institucional en tu wallet o red actual."
 		};
 	}
 
 	return {
 		errorCode: "TRANSACTION_REJECTED",
-		message: "The registration transaction failed. Please try again."
+		message: "La transacción de registro falló. Inténtalo de nuevo."
 	};
 }
 

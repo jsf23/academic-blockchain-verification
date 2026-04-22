@@ -13,7 +13,7 @@ describe("Registration flow helpers (US1)", () => {
 			hashFile: async () => "",
 			isAuthorizedIssuer: async () => true,
 			issueCertificate: async () => ({}),
-			formatTimestamp: () => "Not available"
+			formatTimestamp: () => "No disponible"
 		});
 
 		const result = await controller.submit({
@@ -113,7 +113,7 @@ describe("Verification flow helpers (US2)", () => {
 describe("Usability messaging helpers (US3)", () => {
 	it("uses plain-language duplicate registration guidance", () => {
 		const result = mapRegistrationError("execution reverted: Certificate already registered");
-		expect(result.message.toLowerCase()).to.include("already exists");
+		expect(result.message.toLowerCase()).to.include("ya existe");
 		expect(result.message.toLowerCase()).to.not.include("revert");
 	});
 
@@ -125,7 +125,7 @@ describe("Usability messaging helpers (US3)", () => {
 		);
 
 		expect(result.status).to.equal("not-found");
-		expect(result.message.toLowerCase()).to.include("no authenticity proof");
+		expect(result.message.toLowerCase()).to.include("no existe una prueba de autenticidad");
 		expect(result.message.toLowerCase()).to.not.include("bytes32");
 	});
 });
