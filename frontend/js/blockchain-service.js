@@ -93,6 +93,19 @@ export async function verifyCertificate(hash) {
 }
 
 export async function issueCertificate(hash, fromAddress) {
+	if (shouldUseInjectedProvider()) {
+		const provider = getInjectedProvider();
+		const accounts = await provider.request({ method: "eth_requestAccounts" });
+		const normalizedFrom = String(fromAddress ?? "").toLowerCase();
+		const authorized = Array.isArray(accounts)
+			? accounts.some((account) => String(account).toLowerCase() === normalizedFrom)
+			: false;
+
+		if (!authorized) {
+			throw new Error("Wallet account not authorized for issuer address (4100).");
+		}
+	}
+
 	const contract = getRegistryContract();
 	const gasEstimate = await contract.methods.issueCertificate(hash).estimateGas({ from: fromAddress });
 	return contract.methods.issueCertificate(hash).send({
@@ -136,6 +149,13 @@ export function classifyIssueError(error) {
 		return {
 			errorCode: "WALLET_UNAVAILABLE",
 			message: "La cuenta institucional configurada no está disponible en el proveedor activo. Cambia a la cuenta institucional en tu wallet o red actual."
+		};
+	}
+
+	if (message.includes("4100") || message.includes("not been authorized by the user") || message.includes("wallet account not authorized")) {
+		return {
+			errorCode: "WALLET_UNAVAILABLE",
+			message: "La wallet no autorizó la cuenta institucional para este sitio. En MetaMask, conecta la cuenta institucional configurada y vuelve a intentar."
 		};
 	}
 
