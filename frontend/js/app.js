@@ -3,6 +3,8 @@ const DEFAULT_CONFIG = {
 	chainId: null,
 	contractAddress: "",
 	contractAbi: [],
+	relayBaseUrl: "",
+	adminRegistrationEnabled: false,
 	preferWalletProvider: true,
 	institutionalIssuerAddress: ""
 };
@@ -14,8 +16,10 @@ const DEFAULT_MESSAGES = {
 	verificationMissing: "No existe una prueba del certificado para ese hash.",
 	technicalFallback: "Ocurrió un problema. Inténtalo de nuevo en un momento.",
 	registrationSuccess: "La huella del certificado se registró correctamente.",
-	registrationWorking: "Enviando el registro a la blockchain...",
+	registrationWorking: "Enviando el registro al relay institucional...",
 	registrationHashReady: "La huella ya fue generada. Ahora puedes registrarla.",
+	relayPending: "La solicitud fue aceptada por el relay institucional. Esperando confirmación...",
+	relayUnavailable: "El registro administrativo no está disponible en este entorno.",
 	verificationWorking: "Consultando el registro... esto puede tardar unos segundos.",
 	verificationValid: "Certificado encontrado: autenticidad confirmada.",
 	verificationNotFound: "No se encontró un registro para esta huella.",

@@ -1,4 +1,4 @@
-import { isBytes32Hex } from "./hash-service.js";
+import { hashFileWithSha256, isBytes32Hex } from "./hash-service.js";
 
 export function mapRegistrationError(error) {
 	const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
@@ -16,6 +16,14 @@ export function mapRegistrationError(error) {
 			status: "failed",
 			errorCode: "DUPLICATE_HASH",
 			message: "Esta huella ya existe en el registro."
+		};
+	}
+
+	if (message.includes("relay") && message.includes("config")) {
+		return {
+			status: "failed",
+			errorCode: "RELAY_UNAVAILABLE",
+			message: "El relay administrativo no está disponible en este entorno."
 		};
 	}
 
@@ -40,10 +48,14 @@ function isEthereumAddress(value) {
 
 export function createRegistrationController(dependencies) {
 	const {
-		hashFile,
-		isAuthorizedIssuer,
+		hashFile = hashFileWithSha256,
+		submitRegistration,
 		issueCertificate,
-		formatTimestamp
+		isAuthorizedIssuer,
+		queryRegistrationStatus,
+		buildIdempotencyKey = ({ hash }) => `hash-${hash.slice(2, 14)}`,
+		formatTimestamp = (timestamp) => String(timestamp ?? "No disponible"),
+		isAdminRegistrationEnabled = () => true
 	} = dependencies ?? {};
 
 	async function generateHash(file) {
@@ -71,7 +83,7 @@ export function createRegistrationController(dependencies) {
 		};
 	}
 
-	async function submit({ issuerAddress, hash }) {
+	async function submit({ issuerAddress, hash, file }) {
 		if (!hash || !isBytes32Hex(hash)) {
 			return {
 				status: "failed",
@@ -96,36 +108,90 @@ export function createRegistrationController(dependencies) {
 			};
 		}
 
-		const authorized = await isAuthorizedIssuer(issuerAddress);
-
-		if (!authorized) {
+		if (!isAdminRegistrationEnabled()) {
 			return {
 				status: "failed",
-				errorCode: "UNAUTHORIZED",
-				message: "La cuenta institucional no está autorizada en este registro."
+				errorCode: "RELAY_UNAVAILABLE",
+				message: "El relay administrativo no está disponible en este entorno."
 			};
 		}
 
-		const submission = await issueCertificate({ hash, issuerAddress });
+		const payload = {
+			hash,
+			fileName: file?.name ?? "certificado",
+			mimeType: file?.type || "application/octet-stream",
+			sizeBytes: Number(file?.size ?? 1),
+			idempotencyKey: buildIdempotencyKey({ hash, file })
+		};
 
-		if (submission.status === "failed") {
+		if (typeof isAuthorizedIssuer === "function") {
+			const authorized = await isAuthorizedIssuer(issuerAddress);
+
+			if (!authorized) {
+				return {
+					status: "failed",
+					errorCode: "UNAUTHORIZED",
+					message: "La cuenta institucional no está autorizada en este registro."
+				};
+			}
+		}
+
+		const submission = typeof submitRegistration === "function"
+			? await submitRegistration(payload)
+			: await issueCertificate({ hash, issuerAddress });
+
+		if (submission.status === "failed" || submission.status === "duplicate") {
 			return {
 				status: "failed",
-				errorCode: submission.errorCode,
+				errorCode: submission.errorCode ?? "TRANSACTION_REJECTED",
 				message: submission.message
 			};
 		}
 
-		const registrationEvent = submission.receipt?.events?.NewRegistration?.returnValues;
-		const issuedTimestamp = registrationEvent?.date ?? `${Math.floor(Date.now() / 1000)}`;
+		if (submission.receipt) {
+			const registrationEvent = submission.receipt?.events?.NewRegistration?.returnValues;
+			const issuedTimestamp = registrationEvent?.date ?? `${Math.floor(Date.now() / 1000)}`;
+
+			return {
+				status: "confirmed",
+				certificateHash: registrationEvent?.hash ?? hash,
+				issuerAddress: registrationEvent?.issuer ?? issuerAddress,
+				issuedAt: formatTimestamp(issuedTimestamp),
+				transactionHash: submission.receipt?.transactionHash ?? "No disponible",
+				message: submission.message ?? "La huella del certificado se registró correctamente."
+			};
+		}
+
+		if (submission.status === "accepted_pending_submission" || submission.status === "submitted_pending_confirmation") {
+			const latest = await queryRegistrationStatus(submission.requestId);
+
+			if (latest.status !== "confirmed") {
+				return {
+					status: latest.status === "duplicate" ? "failed" : "pending",
+					requestId: latest.requestId,
+					errorCode: latest.errorCode ?? null,
+					message: latest.message,
+					transactionHash: latest.txHash ?? "No disponible"
+				};
+			}
+
+			return {
+				status: "confirmed",
+				certificateHash: latest.certificateHash ?? hash,
+				issuerAddress,
+				issuedAt: formatTimestamp(`${Math.floor(Date.now() / 1000)}`),
+				transactionHash: latest.txHash ?? "No disponible",
+				message: latest.message
+			};
+		}
 
 		return {
 			status: "confirmed",
-			certificateHash: registrationEvent?.hash ?? hash,
-			issuerAddress: registrationEvent?.issuer ?? issuerAddress,
-			issuedAt: formatTimestamp(issuedTimestamp),
-			transactionHash: submission.receipt?.transactionHash ?? "No disponible",
-			message: "La huella del certificado se registró correctamente."
+			certificateHash: submission.certificateHash ?? hash,
+			issuerAddress,
+			issuedAt: formatTimestamp(`${Math.floor(Date.now() / 1000)}`),
+			transactionHash: submission.txHash ?? "No disponible",
+			message: submission.message ?? "La huella del certificado se registró correctamente."
 		};
 	}
 

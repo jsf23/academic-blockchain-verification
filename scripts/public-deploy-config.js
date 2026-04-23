@@ -24,6 +24,28 @@ export function normalizeChainId(value) {
 	return Number.isFinite(parsed) ? parsed : null;
 }
 
+export function normalizeBoolean(value, defaultValue = false) {
+	if (value === undefined || value === null || value === "") {
+		return defaultValue;
+	}
+
+	if (typeof value === "boolean") {
+		return value;
+	}
+
+	const normalized = String(value).trim().toLowerCase();
+
+	if (["true", "1", "yes", "on"].includes(normalized)) {
+		return true;
+	}
+
+	if (["false", "0", "no", "off"].includes(normalized)) {
+		return false;
+	}
+
+	return defaultValue;
+}
+
 export async function fileExists(targetPath) {
 	try {
 		await fs.access(targetPath);
@@ -102,6 +124,21 @@ export function buildPublicRuntimeConfig({ environment = process.env, artifact =
 		existingConfig?.institutionalIssuerAddress,
 		""
 	);
+	const relayBaseUrl = pickPreferredValue(
+		environment.PUBLIC_RELAY_BASE_URL,
+		environment.RELAY_BASE_URL,
+		existingConfig?.relayBaseUrl,
+		""
+	);
+	const adminRegistrationEnabled = normalizeBoolean(
+		pickPreferredValue(
+			environment.PUBLIC_ADMIN_REGISTRATION_ENABLED,
+			environment.ADMIN_REGISTRATION_ENABLED,
+			existingConfig?.adminRegistrationEnabled,
+			false
+		),
+		false
+	);
 	const preferWalletProvider = (() => {
 		const raw = pickPreferredValue(
 			environment.PUBLIC_PREFER_WALLET_PROVIDER,
@@ -121,6 +158,8 @@ export function buildPublicRuntimeConfig({ environment = process.env, artifact =
 		rpcUrl,
 		chainId,
 		contractAddress,
+		relayBaseUrl,
+		adminRegistrationEnabled,
 		institutionalIssuerAddress,
 		contractAbi,
 		preferWalletProvider
@@ -146,8 +185,16 @@ export function validatePublicRuntimeConfig(config) {
 		issues.push("institutionalIssuerAddress must be a valid EVM address.");
 	}
 
+	if (config?.adminRegistrationEnabled === true && !isNonEmpty(config?.relayBaseUrl)) {
+		issues.push("relayBaseUrl is required when adminRegistrationEnabled is true.");
+	}
+
 	if (!Array.isArray(config?.contractAbi) || config.contractAbi.length === 0) {
 		issues.push("contractAbi must be a non-empty ABI array.");
+	}
+
+	if (typeof config?.adminRegistrationEnabled !== "boolean") {
+		issues.push("adminRegistrationEnabled must be a boolean value.");
 	}
 
 	if (typeof config?.preferWalletProvider !== "boolean") {

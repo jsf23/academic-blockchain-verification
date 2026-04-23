@@ -97,3 +97,5 @@ pnpm-debug.log*
 artifacts/
 frontend/contract-config.json
 dist/
+.vercel
+.env*.local

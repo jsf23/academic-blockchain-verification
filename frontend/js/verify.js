@@ -49,6 +49,8 @@ function wireVerificationPage() {
 		formatTimestamp: formatUnixTimestamp
 	});
 
+	applyStatus(statusBox, "status-idle", "Esperando una huella. La consulta se realiza directamente sobre blockchain.");
+
 	form.addEventListener("submit", async (event) => {
 		event.preventDefault();
 

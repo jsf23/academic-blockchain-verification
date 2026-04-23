@@ -1,160 +1,5 @@
 import { formatUnixTimestamp, getUserMessage } from "./app.js";
-import { isAuthorizedIssuer, submitCertificateIssuance } from "./blockchain-service.js";
-import { hashFileWithSha256, isBytes32Hex } from "./hash-service.js";
-
-export function mapRegistrationError(error) {
-	const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
-
-	if (message.includes("authorized")) {
-		return {
-			status: "failed",
-			errorCode: "UNAUTHORIZED",
-			message: "La cuenta institucional no está autorizada para registrar certificados."
-		};
-	}
-
-	if (message.includes("duplicate") || message.includes("already")) {
-		return {
-			status: "failed",
-			errorCode: "DUPLICATE_HASH",
-			message: "Esta huella ya existe en el registro."
-		};
-	}
-
-	if (message.includes("hash") || message.includes("bytes32") || message.includes("invalid")) {
-		return {
-			status: "failed",
-			errorCode: "INVALID_HASH",
-			message: "Se requiere una huella SHA-256 válida."
-		};
-	}
-
-	if (
-		message.includes("missing contract configuration") ||
-		message.includes("missing blockchain provider configuration") ||
-		message.includes("missing config")
-	) {
-		return {
-			status: "failed",
-			errorCode: "CONTRACT_UNAVAILABLE",
-			message: "La configuración está incompleta. Verifica contractAddress, ABI y la red en contract-config.json."
-		};
-	}
-
-	if (message.includes("chain") || message.includes("network") || message.includes("wrong network")) {
-		return {
-			status: "failed",
-			errorCode: "NETWORK_UNAVAILABLE",
-			message: "La red de la wallet no coincide con la red configurada del contrato. Cambia de red e inténtalo de nuevo."
-		};
-	}
-
-	return {
-		status: "failed",
-		errorCode: "TRANSACTION_REJECTED",
-		message: "No fue posible completar el registro. Revisa tu conexión con la wallet o la red e inténtalo de nuevo."
-	};
-}
-
-export function createRegistrationController(dependencies) {
-	const {
-		hashFile = hashFileWithSha256,
-		checkAuthorization = dependencies?.isAuthorizedIssuer ?? isAuthorizedIssuer,
-		issueCertificate = submitCertificateIssuance
-	} = dependencies ?? {};
-
-	async function generateHash(file) {
-		if (!file) {
-			return {
-				status: "failed",
-				errorCode: "INVALID_HASH",
-				message: "Selecciona un archivo de certificado antes de generar la huella."
-			};
-		}
-
-		const hash = await hashFile(file);
-
-		if (!isBytes32Hex(hash)) {
-			return {
-				status: "failed",
-				errorCode: "INVALID_HASH",
-				message: "La huella generada no tiene un formato bytes32 válido."
-			};
-		}
-
-		return {
-			status: "ready",
-			hash
-		};
-	}
-
-	async function submit({ issuerAddress, hash }) {
-		if (!hash || !isBytes32Hex(hash)) {
-			return {
-				status: "failed",
-				errorCode: "INVALID_HASH",
-				message: "Genera una huella SHA-256 válida antes de registrar."
-			};
-		}
-
-		if (!issuerAddress) {
-			return {
-				status: "failed",
-				errorCode: "WALLET_UNAVAILABLE",
-				message: "No hay una cuenta institucional emisora configurada para continuar."
-			};
-		}
-
-		if (!isEthereumAddress(issuerAddress)) {
-			return {
-				status: "failed",
-				errorCode: "WALLET_UNAVAILABLE",
-				message: "La cuenta institucional configurada no tiene un formato de dirección EVM válido."
-			};
-		}
-
-		try {
-			const isAuthorized = await checkAuthorization(issuerAddress);
-			if (!isAuthorized) {
-				return {
-					status: "failed",
-					errorCode: "UNAUTHORIZED",
-					message: "La cuenta institucional no está autorizada en este registro."
-				};
-			}
-		} catch {
-			// pre-check failed (provider issue); let the transaction decide
-		}
-
-		const submission = await issueCertificate({ hash, issuerAddress });
-
-		if (submission.status === "failed") {
-			return {
-				status: "failed",
-				errorCode: submission.errorCode,
-				message: submission.message,
-				rawError: submission.rawError
-			};
-		}
-
-		const registrationEvent = submission.receipt?.events?.NewRegistration?.returnValues;
-		const issuedTimestamp = registrationEvent?.date ?? `${Math.floor(Date.now() / 1000)}`;
-
-		return {
-			status: "confirmed",
-			certificateHash: registrationEvent?.hash ?? hash,
-			issuerAddress: registrationEvent?.issuer ?? issuerAddress,
-			issuedAt: formatUnixTimestamp(issuedTimestamp),
-			transactionHash: submission.receipt?.transactionHash ?? "No disponible",
-			message: getUserMessage("registrationSuccess", "La huella del certificado se registró correctamente.")
-		};
-	}
-
-	return {
-		generateHash,
-		submit
-	};
-}
+import { createRegistrationController, mapRegistrationError } from "./register-controller.js";
 
 function applyStatus(element, styleClass, text) {
 	if (!element) {
@@ -199,6 +44,76 @@ function getInstitutionalIssuerAddress() {
 	return normalizeIssuerAddress(window.AcademicIntegrityApp?.config?.institutionalIssuerAddress ?? "");
 }
 
+function isAdministrativeRelayEnabled() {
+	return window.AcademicIntegrityApp?.config?.adminRegistrationEnabled === true;
+}
+
+function getRelayBaseUrl() {
+	return String(window.AcademicIntegrityApp?.config?.relayBaseUrl ?? "").trim().replace(/\/$/, "");
+}
+
+function buildRelayEndpoint(path) {
+	const relayBaseUrl = getRelayBaseUrl();
+
+	if (!relayBaseUrl) {
+		throw new Error("relay config missing");
+	}
+
+	return `${relayBaseUrl}${path}`;
+}
+
+function buildIdempotencyKey({ hash, file }) {
+	const safeName = String(file?.name ?? "certificado").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 24) || "certificado";
+	return `${safeName}-${hash.slice(2, 14)}-${crypto.randomUUID()}`;
+}
+
+async function requestRelay(path, options = {}) {
+	const response = await fetch(buildRelayEndpoint(path), {
+		...options,
+		headers: {
+			"Content-Type": "application/json",
+			"X-Operator-Id": "institutional-web",
+			...(options.headers ?? {})
+		}
+	});
+	const payload = await response.json().catch(() => ({}));
+
+	if (!response.ok) {
+		throw new Error(payload.message ?? `relay request failed (${response.status})`);
+	}
+
+	return payload;
+}
+
+async function submitAdministrativeRegistration(payload) {
+	return requestRelay("/api/admin/register-hash", {
+		method: "POST",
+		body: JSON.stringify(payload)
+	});
+}
+
+async function getAdministrativeRegistrationStatus(requestId) {
+	return requestRelay(`/api/admin/register-status?requestId=${encodeURIComponent(requestId)}`, {
+		method: "GET"
+	});
+}
+
+async function waitForRelayResolution(requestId, attempts = 10) {
+	let latest = null;
+
+	for (let index = 0; index < attempts; index += 1) {
+		latest = await getAdministrativeRegistrationStatus(requestId);
+
+		if (["confirmed", "duplicate", "failed"].includes(latest.status)) {
+			return latest;
+		}
+
+		await new Promise((resolve) => window.setTimeout(resolve, 1500));
+	}
+
+	return latest;
+}
+
 function wireRegistrationPage() {
 	if (typeof document === "undefined") {
 		return;
@@ -224,18 +139,38 @@ function wireRegistrationPage() {
 	const resultIssuer = document.getElementById("resultIssuer");
 	const resultDate = document.getElementById("resultDate");
 	const resultTx = document.getElementById("resultTx");
+	const relayModeLabel = document.getElementById("relayModeLabel");
 
-	const controller = createRegistrationController();
+	const controller = createRegistrationController({
+		submitRegistration: submitAdministrativeRegistration,
+		queryRegistrationStatus: waitForRelayResolution,
+		buildIdempotencyKey,
+		formatTimestamp: formatUnixTimestamp,
+		isAdminRegistrationEnabled: () => isAdministrativeRelayEnabled() && Boolean(getRelayBaseUrl())
+	});
 	const institutionalIssuerAddress = getInstitutionalIssuerAddress();
 	const hasInstitutionalIssuer = Boolean(institutionalIssuerAddress);
 	const institutionalIssuerIsValid = isEthereumAddress(institutionalIssuerAddress);
+	const relayConfigured = isAdministrativeRelayEnabled() && Boolean(getRelayBaseUrl());
 
 	if (issuerInput) {
 		issuerInput.value = institutionalIssuerAddress;
 		issuerInput.readOnly = true;
 	}
 
-	if (!hasInstitutionalIssuer) {
+	if (relayModeLabel) {
+		relayModeLabel.textContent = relayConfigured
+			? "El registro se enviará por relay institucional preconfigurado."
+			: "El relay administrativo aún no está disponible para este entorno.";
+	}
+
+	if (!relayConfigured) {
+		applyFloatingNote(
+			preRegistrationNotice,
+			"floating-note-error",
+			getUserMessage("relayUnavailable", "El registro administrativo no está disponible en este entorno.")
+		);
+	} else if (!hasInstitutionalIssuer) {
 		if (issuerHint) {
 			issuerHint.textContent = "No hay cuenta institucional configurada para este entorno.";
 		}
@@ -291,15 +226,27 @@ function wireRegistrationPage() {
 			return;
 		}
 
+		if (!relayConfigured) {
+			applyStatus(statusBox, "status-error", getUserMessage("relayUnavailable", "El registro administrativo no está disponible en este entorno."));
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Define relayBaseUrl y habilita adminRegistrationEnabled en contract-config.json para continuar.");
+			return;
+		}
+
 		issuerInput.value = institutionalIssuerAddress;
-		applyStatus(statusBox, "status-working", getUserMessage("registrationWorking", "Enviando el registro a la blockchain..."));
+		applyStatus(statusBox, "status-working", getUserMessage("registrationWorking", "Enviando el registro al relay institucional..."));
 		resultBlock.hidden = true;
 
 		try {
 			const result = await controller.submit({
 				issuerAddress: issuerInput?.value?.trim() ?? "",
-				hash: hashInput?.value?.trim() ?? ""
+				hash: hashInput?.value?.trim() ?? "",
+				file: fileInput?.files?.[0] ?? null
 			});
+
+			if (result.status === "pending") {
+				applyStatus(statusBox, "status-working", result.message ?? getUserMessage("relayPending", "La solicitud fue aceptada por el relay institucional. Esperando confirmación..."));
+				return;
+			}
 
 			if (result.status !== "confirmed") {
 				applyStatus(statusBox, "status-error", result.message);
@@ -313,7 +260,8 @@ function wireRegistrationPage() {
 			resultBlock.hidden = false;
 			applyStatus(statusBox, "status-success", result.message);
 		} catch (error) {
-			applyStatus(statusBox, "status-error", "No fue posible completar el registro. Inténtalo de nuevo.");
+			const mapped = mapRegistrationError(error);
+			applyStatus(statusBox, "status-error", mapped.message);
 		}
 	}
 

@@ -6,7 +6,8 @@ Prototipo TRL 5 para registrar y verificar titulos academicos mediante huellas S
 
 - Node.js (preferiblemente usando `nvm`)
 - Un endpoint RPC (por ejemplo Alchemy en Sepolia)
-- Una wallet compatible (por ejemplo MetaMask)
+- Una cuenta institucional existente para registros administrativos
+- Un relay backend gratuito para registros administrativos (por ejemplo Vercel Functions)
 
 ## Configuracion recomendada con nvm
 
@@ -23,6 +24,7 @@ Este repositorio incluye `.nvmrc` con la version recomendada.
 - `npm run deploy`
 - `npm run seed:issuers`
 - `npm run config:frontend`
+- `npm run validate:relay-config`
 - `npm run validate:public-config`
 - `npm run build:pages`
 - `npm run prepare:pages`
@@ -31,11 +33,12 @@ Este repositorio incluye `.nvmrc` con la version recomendada.
 
 ## Flujo local
 
-1. Configurar `.env` a partir de `.env.example` con `RPC_URL`, `CHAIN_ID`, `DEPLOYER_PRIVATE_KEY`, `AUTHORIZED_ISSUERS`, `CONTRACT_ADDRESS` e `INSTITUTIONAL_ISSUER_ADDRESS`.
+1. Configurar `.env` a partir de `.env.example` con `RPC_URL`, `CHAIN_ID`, `DEPLOYER_PRIVATE_KEY`, `AUTHORIZED_ISSUERS`, `CONTRACT_ADDRESS`, `INSTITUTIONAL_ISSUER_ADDRESS`, `RELAY_BASE_URL` y `RELAY_ALLOWED_ORIGIN` para el entorno administrativo.
 2. Ejecutar `npm install`.
 3. Ejecutar `npm run deploy` para compilar y desplegar el contrato.
 4. Ejecutar `npm run config:frontend` para generar `frontend/contract-config.json` desde `.env` y `artifacts`.
-5. Ejecutar `npm run start` para servir el frontend estatico.
+5. Ejecutar `npm run validate:relay-config` para verificar la configuracion restringida del relay administrativo.
+6. Ejecutar `npm run start` para servir el frontend estatico.
 
 ## Configuracion runtime del frontend
 
@@ -43,8 +46,31 @@ Este repositorio incluye `.nvmrc` con la version recomendada.
 - Ese archivo esta en `.gitignore` para no versionar endpoints ni claves.
 - Usa `npm run config:frontend` para regenerarlo cuando cambie red/contrato.
 - Puedes usar `frontend/contract-config.template.json` como referencia.
-- `preferWalletProvider=true` hace que el frontend use MetaMask primero (si existe) y use `rpcUrl` como fallback.
-- `institutionalIssuerAddress` define la cuenta institucional fija usada para registrar certificados desde el frontend.
+- `relayBaseUrl` define la URL publica del relay administrativo separado del frontend.
+- `adminRegistrationEnabled=true` activa el flujo administrativo sin MetaMask para la pagina de registro.
+- `preferWalletProvider=true` sigue siendo util para lecturas en entornos legacy, pero el registro administrativo ya no depende de MetaMask cuando `adminRegistrationEnabled=true`.
+- `institutionalIssuerAddress` define la cuenta institucional fija que el relay debe representar al registrar certificados.
+
+## Relay administrativo gratuito
+
+El sitio publicado puede mantenerse en GitHub Pages, mientras que el registro administrativo se delega a un backend gratuito separado.
+
+### Variables restringidas del relay
+
+Estas variables deben existir solo del lado servidor y no deben publicarse en GitHub Pages:
+
+- `RELAY_RPC_URL` o `RPC_URL`
+- `RELAY_CONTRACT_ADDRESS` o `CONTRACT_ADDRESS`
+- `RELAY_PRIVATE_KEY`
+- `RELAY_ALLOWED_ORIGIN`
+- `RELAY_ADMIN_TOKEN` si deseas endurecer el acceso con token adicional
+
+### Comportamiento esperado del relay
+
+- `POST /api/admin/register-hash` recibe la huella y crea el registro administrativo.
+- `GET /api/admin/register-status?requestId=...` devuelve el ultimo estado conocido de la solicitud.
+- Si `RELAY_ADMIN_TOKEN` no existe, el relay puede limitar acceso por `RELAY_ALLOWED_ORIGIN` para un flujo preconfigurado de operador sin prompts adicionales.
+- La verificacion publica en `verify.html` sigue consultando directo al contrato y no pasa por el relay.
 
 ## Deploy gratuito con GitHub Pages
 
@@ -75,6 +101,7 @@ Todos esos valores deben tratarse como publicos porque terminan en `contract-con
 2. En `Settings > Secrets and variables > Actions`, crea las Repository Variables publicas listadas arriba.
 3. Verifica localmente el empaquetado antes de subir cambios:
 	- `npm run validate:public-config`
+	- `npm run validate:relay-config`
 	- `npm run build:pages`
 4. Sube a `main` o ejecuta manualmente el workflow `Deploy Frontend to GitHub Pages`.
 5. Cuando el job termine, toma la URL publicada desde el environment `github-pages`.
@@ -106,7 +133,7 @@ La planificacion detallada del proyecto y features vive en `specs/`.
 2. Ve a **Register certificate**.
 3. Carga una muestra de certificado y genera la huella.
 4. Verifica que la cuenta institucional configurada sea la autorizada y registra la huella.
-5. Muestra el resultado: huella, emisor, fecha y transaccion.
+5. Muestra el resultado: huella, emisor, fecha y transaccion confirmada por el relay.
 6. Ve a **Verify certificate**, pega la misma huella y ejecuta la verificacion.
 7. Muestra el estado **Authentic certificate**.
 8. Cambia un caracter de la huella y verifica otra vez para mostrar **No record found**.
