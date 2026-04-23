@@ -67,6 +67,19 @@ function buildIdempotencyKey({ hash, file }) {
 	return `${safeName}-${hash.slice(2, 14)}-${crypto.randomUUID()}`;
 }
 
+function getFileSignature(file) {
+	if (!file) {
+		return "";
+	}
+
+	return [
+		String(file.name ?? "").trim(),
+		Number(file.size ?? 0),
+		Number(file.lastModified ?? 0),
+		String(file.type ?? "").trim()
+	].join("::");
+}
+
 async function requestRelay(path, options = {}) {
 	const response = await fetch(buildRelayEndpoint(path), {
 		...options,
@@ -152,6 +165,79 @@ function wireRegistrationPage() {
 	const hasInstitutionalIssuer = Boolean(institutionalIssuerAddress);
 	const institutionalIssuerIsValid = isEthereumAddress(institutionalIssuerAddress);
 	const relayConfigured = isAdministrativeRelayEnabled() && Boolean(getRelayBaseUrl());
+	let isGeneratingHash = false;
+	let isSubmittingRegistration = false;
+	let lockedSubmittedFileSignature = "";
+
+	function setButtonBusy(button, isBusy, idleLabel, busyLabel) {
+		if (!button) {
+			return;
+		}
+
+		button.disabled = isBusy;
+		button.setAttribute("aria-busy", isBusy ? "true" : "false");
+		button.textContent = isBusy ? busyLabel : idleLabel;
+	}
+
+	function resetSubmissionLock() {
+		lockedSubmittedFileSignature = "";
+	}
+
+	function clearGeneratedHash() {
+		if (hashInput) {
+			hashInput.value = "";
+		}
+	}
+
+	function isLockedSubmittedFile(file) {
+		const signature = getFileSignature(file);
+		return Boolean(signature) && signature === lockedSubmittedFileSignature;
+	}
+
+	function syncButtonsState() {
+		setButtonBusy(
+			generateButton,
+			isGeneratingHash,
+			"Generar huella",
+			"Generando huella..."
+		);
+		setButtonBusy(
+			document.getElementById("submitRegistrationButton"),
+			isSubmittingRegistration,
+			"Registrar por relay institucional",
+			"Enviando al relay..."
+		);
+	}
+
+	function handleFileInputChange() {
+		const currentFile = fileInput?.files?.[0] ?? null;
+
+		if (!currentFile) {
+			resetSubmissionLock();
+			clearGeneratedHash();
+			applyFloatingNote(
+				preRegistrationNotice,
+				"floating-note-info",
+				"Archivo eliminado. Ya puedes seleccionar un certificado y generar una nueva huella."
+			);
+			return;
+		}
+
+		clearGeneratedHash();
+		resultBlock.hidden = true;
+
+		if (!isLockedSubmittedFile(currentFile)) {
+			return;
+		}
+
+		applyFloatingNote(
+			preRegistrationNotice,
+			"floating-note-error",
+			"Este archivo ya fue enviado al relay. Elimínalo del selector antes de volver a intentarlo."
+		);
+	}
+
+	syncButtonsState();
 
 	if (issuerInput) {
 		issuerInput.value = institutionalIssuerAddress;
@@ -193,8 +279,24 @@ function wireRegistrationPage() {
 	}
 
 	async function handleGenerate() {
+		if (isGeneratingHash || isSubmittingRegistration) {
+			return;
+		}
+
+		const file = fileInput?.files?.[0] ?? null;
+
+		if (isLockedSubmittedFile(file)) {
+			applyFloatingNote(
+				preRegistrationNotice,
+				"floating-note-error",
+				"Este archivo ya fue enviado al relay. Elimínalo del selector antes de generar otra vez la huella."
+			);
+			return;
+		}
+
+		isGeneratingHash = true;
+		syncButtonsState();
 		applyFloatingNote(preRegistrationNotice, "floating-note-info", "Generando la huella del certificado...");
-		const file = fileInput?.files?.[0];
 
 		try {
 			const result = await controller.generateHash(file);
@@ -209,11 +311,28 @@ function wireRegistrationPage() {
 		} catch (error) {
 			const mapped = mapRegistrationError(error);
 			applyFloatingNote(preRegistrationNotice, "floating-note-error", mapped.message);
+		} finally {
+			isGeneratingHash = false;
+			syncButtonsState();
 		}
 	}
 
 	async function handleSubmit(event) {
 		event.preventDefault();
+
+		if (isSubmittingRegistration || isGeneratingHash) {
+			return;
+		}
+
+		const currentFile = fileInput?.files?.[0] ?? null;
+		const submissionFileSignature = getFileSignature(currentFile);
+
+		if (isLockedSubmittedFile(currentFile)) {
+			applyStatus(statusBox, "status-error", "Este archivo ya fue enviado al relay institucional.");
+			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Elimina el archivo actual del selector antes de volver a registrarlo.");
+			return;
+		}
+
 		if (!hasInstitutionalIssuer) {
 			applyStatus(statusBox, "status-error", "No hay cuenta institucional configurada para registrar.");
 			applyFloatingNote(preRegistrationNotice, "floating-note-error", "Configura la cuenta institucional antes de enviar el registro.");
@@ -233,6 +352,9 @@ function wireRegistrationPage() {
 		}
 
 		issuerInput.value = institutionalIssuerAddress;
+		isSubmittingRegistration = true;
+		lockedSubmittedFileSignature = submissionFileSignature;
+		syncButtonsState();
 		applyStatus(statusBox, "status-working", getUserMessage("registrationWorking", "Enviando el registro al relay institucional..."));
 		resultBlock.hidden = true;
 
@@ -240,7 +362,7 @@ function wireRegistrationPage() {
 			const result = await controller.submit({
 				issuerAddress: issuerInput?.value?.trim() ?? "",
 				hash: hashInput?.value?.trim() ?? "",
-				file: fileInput?.files?.[0] ?? null
+				file: currentFile
 			});
 
 			if (result.status === "pending") {
@@ -262,6 +384,9 @@ function wireRegistrationPage() {
 		} catch (error) {
 			const mapped = mapRegistrationError(error);
 			applyStatus(statusBox, "status-error", mapped.message);
+		} finally {
+			isSubmittingRegistration = false;
+			syncButtonsState();
 		}
 	}
 
@@ -283,6 +408,7 @@ function wireRegistrationPage() {
 
 	generateButton?.addEventListener("click", handleGenerate);
 	copyHashButton?.addEventListener("click", handleCopyHash);
+	fileInput?.addEventListener("change", handleFileInputChange);
 	form?.addEventListener("submit", handleSubmit);
 }
 
