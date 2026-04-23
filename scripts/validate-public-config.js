@@ -25,6 +25,8 @@ async function main() {
 		contractAddress: config.contractAddress,
 		chainId: config.chainId,
 		hasAbi: Array.isArray(config.contractAbi) && config.contractAbi.length > 0,
+		hasRelayBaseUrl: Boolean(config.relayBaseUrl),
+		adminRegistrationEnabled: config.adminRegistrationEnabled,
 		preferWalletProvider: config.preferWalletProvider
 	}, null, 2));
 }

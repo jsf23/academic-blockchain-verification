@@ -6,8 +6,14 @@
 	"description": "Prototype for academic certificate registration and verification on a local blockchain.",
 	"scripts": {
 		"start": "http-server frontend -p 4173 -c-1",
+		"start:api": "node scripts/dev-relay-server.js",
+		"vercel:link": "npx vercel link",
+		"deploy:api": "npx vercel --prod",
+		"deploy:api:preview": "npx vercel",
+		"logs:api": "npx vercel logs",
 		"deploy": "node scripts/deploy.js",
 		"config:frontend": "node scripts/build-frontend-config.js",
+		"validate:relay-config": "node --input-type=module -e \"import('./backend/lib/relay-config.js').then(async ({ loadRelayRuntimeConfig }) => { const config = await loadRelayRuntimeConfig(); console.log(JSON.stringify({ chainId: config.chainId, contractAddress: config.contractAddress, issuerAddress: config.issuerAddress, relayBaseUrl: config.relayBaseUrl, storagePath: config.storagePath }, null, 2)); }).catch((error) => { console.error(error.stack ?? error.message); process.exit(1); });\"",
 		"validate:public-config": "node scripts/validate-public-config.js",
 		"build:pages": "node scripts/build-pages-artifact.js",
 		"prepare:pages": "npm run validate:public-config && npm run build:pages",
@@ -25,6 +31,7 @@
 		"ganache": "^7.9.2",
 		"http-server": "^14.1.1",
 		"mocha": "^10.8.2",
-		"solc": "^0.8.30"
+		"solc": "^0.8.30",
+		"vercel": "^52.0.0"
 	}
 }

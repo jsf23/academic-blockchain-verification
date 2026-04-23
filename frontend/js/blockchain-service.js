@@ -5,9 +5,15 @@ function getRuntimeConfig() {
 		rpcUrl: "",
 		contractAddress: "",
 		contractAbi: [],
+		relayBaseUrl: "",
+		adminRegistrationEnabled: false,
 		preferWalletProvider: true,
 		institutionalIssuerAddress: ""
 	};
+}
+
+function isAdministrativeRelayMode() {
+	return getRuntimeConfig().adminRegistrationEnabled === true;
 }
 
 function getInjectedProvider() {
@@ -93,6 +99,10 @@ export async function verifyCertificate(hash) {
 }
 
 export async function issueCertificate(hash, fromAddress) {
+	if (isAdministrativeRelayMode()) {
+		throw new Error("Administrative relay mode is enabled; browser writes are disabled.");
+	}
+
 	if (shouldUseInjectedProvider()) {
 		const provider = getInjectedProvider();
 		const accounts = await provider.request({ method: "eth_requestAccounts" });
@@ -135,6 +145,13 @@ export function classifyIssueError(error) {
 		return {
 			errorCode: "INVALID_HASH",
 			message: "La huella del certificado no es válida. Genera primero una huella SHA-256 válida."
+		};
+	}
+
+	if (message.includes("administrative relay mode is enabled")) {
+		return {
+			errorCode: "RELAY_UNAVAILABLE",
+			message: "Este entorno usa relay administrativo. El registro ya no se firma desde la wallet del navegador."
 		};
 	}
 

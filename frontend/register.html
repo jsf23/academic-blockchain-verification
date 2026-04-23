@@ -15,15 +15,17 @@
 			<a class="back-link" href="./index.html">Volver al inicio</a>
 			<p class="eyebrow">Espacio de la institución emisora</p>
 			<h1>Registrar huella de certificado</h1>
-			<p class="lede">Carga el documento de forma local, genera la huella SHA-256 en el navegador y prepárala para
-				su registro en blockchain.</p>
+			<p class="lede">Carga el documento de forma local, genera la huella SHA-256 en el navegador y envíala al relay
+				institucional preconfigurado para su registro on-chain.</p>
 		</header>
 
 		<section class="panel-grid register-layout">
 			<article class="panel-card">
 				<h2>Ruta guiada de registro</h2>
 				<p>Sigue estos pasos en orden para preparar la huella, confirmar la cuenta institucional y registrar el
-					certificado.</p>
+					certificado mediante el relay administrativo.</p>
+				<p id="relayModeLabel" class="step-text" aria-live="polite">Comprobando disponibilidad del relay
+					institucional...</p>
 				<form id="registrationForm" class="form-stack" novalidate>
 					<div class="step-flow" aria-label="Pasos para registrar un certificado">
 						<section class="step-card">
@@ -63,13 +65,15 @@
 						<section class="step-card">
 							<div class="step-number">4</div>
 							<div class="step-content">
-								<h3 class="step-title">Copiar el hash</h3>
+								<h3 class="step-title">Confirmar y enviar</h3>
 								<label class="form-label" for="certificateHash">Huella SHA-256 generada</label>
 								<div class="input-action-row">
 									<input id="certificateHash" name="certificateHash" class="form-input form-input-mono" type="text"
 										placeholder="0x..." autocomplete="off" readonly />
 									<button id="copyHashButton" class="secondary-link compact-button" type="button">Copiar hash</button>
 								</div>
+								<p class="step-text">La web enviará la solicitud al relay institucional sin requerir MetaMask ni otra
+									wallet.</p>
 							</div>
 						</section>
 					</div>
@@ -79,7 +83,7 @@
 
 					<button id="submitRegistrationButton"
 						class="primary-button button-like register-submit register-submit-primary" type="submit">
-						Registrar en blockchain
+						Registrar por relay institucional
 					</button>
 				</form>
 				<ul class="micro-list" aria-label="Recomendaciones antes de registrar">
@@ -90,9 +94,9 @@
 			</article>
 			<article class="panel-card">
 				<h2>Resultado del registro</h2>
-				<p>Este panel queda reservado para la validación final y el resultado del envío a blockchain.</p>
+				<p>Este panel muestra el estado final del relay y la confirmación del registro on-chain.</p>
 				<div id="registrationStatus" class="status-box status-idle" role="status" aria-live="polite">
-					Aún no se ha enviado ningún registro a blockchain.
+					Aún no se ha enviado ninguna solicitud al relay institucional.
 				</div>
 				<dl class="result-grid" id="registrationResult" hidden>
 					<div>
